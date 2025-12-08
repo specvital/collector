@@ -1,0 +1,21 @@
+{
+  "name": "template-repository",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/template-repository",
+  "features": {
+    "ghcr.io/guiyomh/features/just:0": {},
+    "./local-features/node": {}
+  },
+  "postCreateCommand": "bash /workspaces/template-repository/.devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode", "skellock.just"],
+      "settings": {
+        "prettier.resolveGlobalModules": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  "remoteUser": "root"
+}

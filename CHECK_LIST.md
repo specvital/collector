@@ -1,0 +1,7 @@
+- main & release branch ruleset
+- action secret GITHUB_PAT
+- workflow permissions - read & write
+- general - open discussion
+- general - Automatically delete head branches Loading
+- advanced security - dependabot settings
+- dependabot.yml

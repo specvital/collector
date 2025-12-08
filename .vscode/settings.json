@@ -1,0 +1,71 @@
+{
+  "editor.detectIndentation": false,
+  "editor.formatOnSave": true,
+  "editor.renderWhitespace": "boundary",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.folding": true,
+  "editor.foldingStrategy": "auto",
+  "editor.foldingImportsByDefault": true,
+  "files.insertFinalNewline": true,
+  "files.autoSave": "onFocusChange",
+  "quickCommandButtons.buttons": [
+    {
+      "color": "green",
+      "name": "$(git-branch) Git",
+      "shortcut": "g",
+      "group": [
+        {
+          "command": "git add . && git commit --amend --no-edit && git push -f",
+          "name": "Push",
+          "shortcut": "p",
+          "terminalName": "Forced Push"
+        },
+        {
+          "command": "git pull",
+          "name": "Pull",
+          "shortcut": "l",
+          "terminalName": "Pull"
+        },
+        {
+          "command": "git add . && git commit --amend --no-edit",
+          "name": "Commit",
+          "shortcut": "c",
+          "terminalName": "Add and Commit Amend"
+        },
+        {
+          "command": "git reset --soft HEAD~1",
+          "name": "Reset Soft",
+          "shortcut": "r",
+          "terminalName": "Reset Soft"
+        },
+        {
+          "command": "git rebase -i HEAD~5",
+          "name": "Rebase 5",
+          "shortcut": "b",
+          "terminalName": "Rebase Interactive 5"
+        },
+        {
+          "command": "git checkout main",
+          "name": "Checkout main",
+          "shortcut": "m",
+          "terminalName": "Checkout main"
+        }
+      ]
+    },
+    {
+      "color": "blue",
+      "command": "export IS_SANDBOX=1 && claude --dangerously-skip-permissions",
+      "name": "$(hubot) Claude",
+      "shortcut": "c",
+      "terminalName": "Claude Yolo",
+      "useVsCodeApi": false
+    }
+  ],
+  "quickCommandButtons.refreshButton": {
+    "icon": "$(refresh)",
+    "color": "gray",
+    "enabled": true
+  }
+}

@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/base:bookworm
+    privileged: true
+    volumes:
+      - ..:/workspaces/specvital-collector:delegated
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.env.secrets:/root/.env.secrets:ro
+      - claude-sessions:/root/.claude
+    env_file:
+      - ${HOME}/.env.secrets
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@specvital-postgres:5432/specvital?sslmode=disable
+      REDIS_URL: redis://specvital-redis:6379
+    networks:
+      - specvital-network
+    command: sleep infinity
+
+networks:
+  specvital-network:
+    external: true
+
+volumes:
+  claude-sessions:

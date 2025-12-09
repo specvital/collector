@@ -56,7 +56,7 @@ build:
     cd src && go build ./...
 
 run:
-    cd src && go run ./cmd/collector
+    cd src && air
 
 test:
     cd src && go test -v ./...

@@ -46,9 +46,6 @@ func main() {
 
 	slog.Info("postgres connected")
 
-	// pool will be used by sqlc Queries in Commit 4
-	_ = pool
-
 	srv, err := queue.NewServer(queue.ServerConfig{
 		RedisURL:    cfg.RedisURL,
 		Concurrency: workerConcurrency,
@@ -60,7 +57,7 @@ func main() {
 	}
 
 	mux := queue.NewServeMux()
-	analyzeHandler := jobs.NewAnalyzeHandler()
+	analyzeHandler := jobs.NewAnalyzeHandler(pool)
 	mux.HandleFunc(jobs.TypeAnalyze, analyzeHandler.ProcessTask)
 
 	shutdown := make(chan os.Signal, 1)

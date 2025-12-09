@@ -1,0 +1,23 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/collector ./cmd/collector"
+  bin = "./tmp/collector"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor"]
+  exclude_regex = ["_test\\.go$"]
+  include_ext = ["go"]
+  kill_delay = 500
+
+[log]
+  time = false
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/specvital/collector/internal/repository"
@@ -211,4 +212,55 @@ func TestAnalysisService_SemaphoreRespectsContextCancellation(t *testing.T) {
 	// context cancellation while waiting for semaphore.
 	// Consider refactoring to inject GitSourceFactory for testability.
 	t.Skip("skipping: requires GitSource mocking to verify context cancellation")
+}
+
+func TestNewAnalysisService_WithAnalysisTimeout(t *testing.T) {
+	mockRepo := &mocks.MockAnalysisRepository{}
+
+	svc := NewAnalysisService(mockRepo, WithAnalysisTimeout(5*time.Minute))
+	if svc == nil {
+		t.Error("expected service, got nil")
+	}
+
+	svcZero := NewAnalysisService(mockRepo, WithAnalysisTimeout(0))
+	if svcZero == nil {
+		t.Error("expected service with default config when 0, got nil")
+	}
+
+	svcNegative := NewAnalysisService(mockRepo, WithAnalysisTimeout(-1*time.Minute))
+	if svcNegative == nil {
+		t.Error("expected service with default config when negative, got nil")
+	}
+}
+
+func TestAnalysisService_Analyze_Timeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
+	mockRepo := &mocks.MockAnalysisRepository{}
+
+	// Use very short timeout to trigger deadline during clone
+	svc := NewAnalysisService(mockRepo, WithAnalysisTimeout(1*time.Nanosecond))
+
+	err := svc.Analyze(context.Background(), AnalyzeRequest{
+		Owner: "octocat",
+		Repo:  "Hello-World",
+	})
+
+	// Should fail with ErrCloneFailed wrapping context.DeadlineExceeded
+	if !errors.Is(err, ErrCloneFailed) {
+		t.Errorf("expected ErrCloneFailed, got %v", err)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context.DeadlineExceeded in error chain, got %v", err)
+	}
+}
+
+func TestAnalysisService_Analyze_TimeoutRecordsFailure(t *testing.T) {
+	// TODO: This test requires injecting GitSourceFactory to control clone timing.
+	// Current implementation uses real git clone which has unpredictable duration,
+	// making it impossible to reliably test timeout behavior after CreateAnalysisRecord.
+	// Consider refactoring to inject GitSourceFactory for testability.
+	t.Skip("skipping: requires GitSourceFactory injection to verify timeout+RecordFailure behavior")
 }

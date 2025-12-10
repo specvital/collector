@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"golang.org/x/sync/semaphore"
 
@@ -14,6 +15,7 @@ import (
 
 const (
 	DefaultMaxConcurrentClones = 2
+	DefaultAnalysisTimeout     = 15 * time.Minute
 )
 
 type AnalyzeRequest struct {
@@ -51,16 +53,19 @@ type AnalysisService interface {
 }
 
 type AnalysisServiceConfig struct {
+	AnalysisTimeout     time.Duration
 	MaxConcurrentClones int64
 }
 
 type analysisService struct {
 	analysisRepo repository.AnalysisRepository
 	cloneSem     *semaphore.Weighted
+	timeout      time.Duration
 }
 
 func NewAnalysisService(repo repository.AnalysisRepository, opts ...AnalysisServiceOption) AnalysisService {
 	cfg := AnalysisServiceConfig{
+		AnalysisTimeout:     DefaultAnalysisTimeout,
 		MaxConcurrentClones: DefaultMaxConcurrentClones,
 	}
 	for _, opt := range opts {
@@ -69,10 +74,19 @@ func NewAnalysisService(repo repository.AnalysisRepository, opts ...AnalysisServ
 	return &analysisService{
 		analysisRepo: repo,
 		cloneSem:     semaphore.NewWeighted(cfg.MaxConcurrentClones),
+		timeout:      cfg.AnalysisTimeout,
 	}
 }
 
 type AnalysisServiceOption func(*AnalysisServiceConfig)
+
+func WithAnalysisTimeout(d time.Duration) AnalysisServiceOption {
+	return func(cfg *AnalysisServiceConfig) {
+		if d > 0 {
+			cfg.AnalysisTimeout = d
+		}
+	}
+}
 
 func WithMaxConcurrentClones(n int64) AnalysisServiceOption {
 	return func(cfg *AnalysisServiceConfig) {
@@ -87,21 +101,25 @@ func (s *analysisService) Analyze(ctx context.Context, req AnalyzeRequest) error
 		return err
 	}
 
+	// Apply total timeout for entire analysis operation
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
 	repoURL := fmt.Sprintf("https://github.com/%s/%s", req.Owner, req.Repo)
 
 	gitSrc, err := func() (*source.GitSource, error) {
-		if err := s.cloneSem.Acquire(ctx, 1); err != nil {
+		if err := s.cloneSem.Acquire(timeoutCtx, 1); err != nil {
 			return nil, err
 		}
 		defer s.cloneSem.Release(1)
-		return source.NewGitSource(ctx, repoURL, nil)
+		return source.NewGitSource(timeoutCtx, repoURL, nil)
 	}()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCloneFailed, err)
 	}
 	defer gitSrc.Close()
 
-	analysisID, err := s.analysisRepo.CreateAnalysisRecord(ctx, repository.CreateAnalysisRecordParams{
+	analysisID, err := s.analysisRepo.CreateAnalysisRecord(timeoutCtx, repository.CreateAnalysisRecordParams{
 		Branch:    gitSrc.Branch(),
 		CommitSHA: gitSrc.CommitSHA(),
 		Owner:     req.Owner,
@@ -111,8 +129,9 @@ func (s *analysisService) Analyze(ctx context.Context, req AnalyzeRequest) error
 		return fmt.Errorf("%w: %w", ErrSaveFailed, err)
 	}
 
-	result, err := parser.Scan(ctx, gitSrc)
+	result, err := parser.Scan(timeoutCtx, gitSrc)
 	if err != nil {
+		// Use parent ctx for RecordFailure to ensure DB write succeeds even if timeout fired
 		if recordErr := s.analysisRepo.RecordFailure(ctx, analysisID, err.Error()); recordErr != nil {
 			slog.ErrorContext(ctx, "failed to record scan failure",
 				"error", recordErr,
@@ -131,10 +150,11 @@ func (s *analysisService) Analyze(ctx context.Context, req AnalyzeRequest) error
 		)
 	}
 
-	if err := s.analysisRepo.SaveAnalysisInventory(ctx, repository.SaveAnalysisInventoryParams{
+	if err := s.analysisRepo.SaveAnalysisInventory(timeoutCtx, repository.SaveAnalysisInventoryParams{
 		AnalysisID: analysisID,
 		Result:     result,
 	}); err != nil {
+		// Use parent ctx for RecordFailure to ensure DB write succeeds even if timeout fired
 		if recordErr := s.analysisRepo.RecordFailure(ctx, analysisID, err.Error()); recordErr != nil {
 			slog.ErrorContext(ctx, "failed to record save failure",
 				"error", recordErr,

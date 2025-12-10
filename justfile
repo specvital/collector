@@ -58,8 +58,25 @@ build:
 run:
     cd src && air
 
-test:
-    cd src && go test -v ./...
+test target="all":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd src
+    case "{{ target }}" in
+      all)
+        TESTCONTAINERS_RYUK_DISABLED=true go test -v ./...
+        ;;
+      unit)
+        go test -v -short ./...
+        ;;
+      integration)
+        TESTCONTAINERS_RYUK_DISABLED=true go test -v -run 'Integration|Repository' ./...
+        ;;
+      *)
+        echo "Unknown target: {{ target }}. Use: unit, integration, all"
+        exit 1
+        ;;
+    esac
 
 tidy:
     cd src && go mod tidy

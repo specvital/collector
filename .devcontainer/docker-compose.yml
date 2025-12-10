@@ -14,9 +14,32 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@specvital-postgres:5432/specvital?sslmode=disable
       REDIS_URL: redis://specvital-redis:6379
+      LOCAL_DATABASE_URL: postgres://postgres:postgres@local-postgres:5432/specvital?sslmode=disable
+      LOCAL_REDIS_URL: redis://local-redis:6379
     networks:
       - specvital-network
+      - default
+    depends_on:
+      - local-redis
+      - local-postgres
     command: sleep infinity
+
+  local-redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no
+
+  local-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: specvital
+    ports:
+      - "5433:5432"
+    volumes:
+      - local-postgres-data:/var/lib/postgresql/data
 
 networks:
   specvital-network:
@@ -24,3 +47,4 @@ networks:
 
 volumes:
   claude-sessions:
+  local-postgres-data:

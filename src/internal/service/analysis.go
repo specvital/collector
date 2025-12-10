@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/specvital/collector/internal/repository"
 	"github.com/specvital/core/pkg/parser"
 	"github.com/specvital/core/pkg/source"
+)
+
+const (
+	DefaultMaxConcurrentClones = 2
 )
 
 type AnalyzeRequest struct {
@@ -44,13 +50,35 @@ type AnalysisService interface {
 	Analyze(ctx context.Context, req AnalyzeRequest) error
 }
 
-type analysisService struct {
-	analysisRepo repository.AnalysisRepository
+type AnalysisServiceConfig struct {
+	MaxConcurrentClones int64
 }
 
-func NewAnalysisService(repo repository.AnalysisRepository) AnalysisService {
+type analysisService struct {
+	analysisRepo repository.AnalysisRepository
+	cloneSem     *semaphore.Weighted
+}
+
+func NewAnalysisService(repo repository.AnalysisRepository, opts ...AnalysisServiceOption) AnalysisService {
+	cfg := AnalysisServiceConfig{
+		MaxConcurrentClones: DefaultMaxConcurrentClones,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	return &analysisService{
 		analysisRepo: repo,
+		cloneSem:     semaphore.NewWeighted(cfg.MaxConcurrentClones),
+	}
+}
+
+type AnalysisServiceOption func(*AnalysisServiceConfig)
+
+func WithMaxConcurrentClones(n int64) AnalysisServiceOption {
+	return func(cfg *AnalysisServiceConfig) {
+		if n > 0 {
+			cfg.MaxConcurrentClones = n
+		}
 	}
 }
 
@@ -61,7 +89,13 @@ func (s *analysisService) Analyze(ctx context.Context, req AnalyzeRequest) error
 
 	repoURL := fmt.Sprintf("https://github.com/%s/%s", req.Owner, req.Repo)
 
-	gitSrc, err := source.NewGitSource(ctx, repoURL, nil)
+	gitSrc, err := func() (*source.GitSource, error) {
+		if err := s.cloneSem.Acquire(ctx, 1); err != nil {
+			return nil, err
+		}
+		defer s.cloneSem.Release(1)
+		return source.NewGitSource(ctx, repoURL, nil)
+	}()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCloneFailed, err)
 	}

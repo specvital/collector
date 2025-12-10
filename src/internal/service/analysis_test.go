@@ -178,3 +178,37 @@ func TestAnalysisService_Analyze_SaveFailure(t *testing.T) {
 		t.Error("expected RecordFailure to be called on save failure")
 	}
 }
+
+func TestNewAnalysisService_WithMaxConcurrentClones(t *testing.T) {
+	mockRepo := &mocks.MockAnalysisRepository{}
+
+	svc := NewAnalysisService(mockRepo, WithMaxConcurrentClones(5))
+	if svc == nil {
+		t.Error("expected service, got nil")
+	}
+
+	svcZero := NewAnalysisService(mockRepo, WithMaxConcurrentClones(0))
+	if svcZero == nil {
+		t.Error("expected service with default config when 0, got nil")
+	}
+
+	svcNegative := NewAnalysisService(mockRepo, WithMaxConcurrentClones(-1))
+	if svcNegative == nil {
+		t.Error("expected service with default config when negative, got nil")
+	}
+}
+
+func TestAnalysisService_SemaphoreLimitsConcurrentClones(t *testing.T) {
+	// TODO: This test requires mocking source.NewGitSource to properly verify
+	// concurrent clone limiting behavior. Current implementation uses real git clone
+	// which cannot be instrumented for concurrency tracking.
+	// Consider refactoring to inject GitSourceFactory for testability.
+	t.Skip("skipping: requires GitSource mocking to verify semaphore behavior")
+}
+
+func TestAnalysisService_SemaphoreRespectsContextCancellation(t *testing.T) {
+	// TODO: This test requires mocking source.NewGitSource to properly verify
+	// context cancellation while waiting for semaphore.
+	// Consider refactoring to inject GitSourceFactory for testability.
+	t.Skip("skipping: requires GitSource mocking to verify context cancellation")
+}

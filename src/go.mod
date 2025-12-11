@@ -5,7 +5,7 @@ go 1.24.11
 require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/specvital/core v1.1.3-0.20251209183057-465e9bc0d0ae
+	github.com/specvital/core v1.3.0
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
 	golang.org/x/sync v0.19.0

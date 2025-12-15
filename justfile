@@ -10,7 +10,7 @@ deps-root:
     pnpm install
 
 dump-schema:
-    PGPASSWORD=postgres pg_dump -h specvital-postgres -U postgres -d specvital --schema-only --no-owner --no-privileges -n public | grep -v '^\\\|^SET \|^SELECT ' > src/internal/db/schema.sql
+    PGPASSWORD=postgres pg_dump -h specvital-postgres -U postgres -d specvital --schema-only --no-owner --no-privileges -n public | grep -v '^\\\|^SET \|^SELECT ' > src/internal/infra/db/schema.sql
 
 enqueue mode="local" *args:
     #!/usr/bin/env bash
@@ -72,7 +72,7 @@ lint target="all":
     esac
 
 migrate-local:
-    PGPASSWORD=postgres psql -h local-postgres -U postgres -d specvital -f src/internal/db/schema.sql
+    PGPASSWORD=postgres psql -h local-postgres -U postgres -d specvital -f src/internal/infra/db/schema.sql
 
 build target="all":
     #!/usr/bin/env bash

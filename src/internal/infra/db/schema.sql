@@ -27,6 +27,15 @@ CREATE TYPE public.analysis_status AS ENUM (
 
 
 --
+-- Name: oauth_provider; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.oauth_provider AS ENUM (
+    'github'
+);
+
+
+--
 -- Name: test_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -76,6 +85,23 @@ CREATE TABLE public.codebases (
 
 
 --
+-- Name: oauth_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.oauth_accounts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    provider public.oauth_provider NOT NULL,
+    provider_user_id character varying(255) NOT NULL,
+    provider_username character varying(255),
+    access_token text,
+    scope character varying(500),
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: test_cases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -108,6 +134,21 @@ CREATE TABLE public.test_suites (
 
 
 --
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email character varying(255),
+    username character varying(255) NOT NULL,
+    avatar_url text,
+    last_login_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: analyses analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -121,6 +162,14 @@ ALTER TABLE ONLY public.analyses
 
 ALTER TABLE ONLY public.codebases
     ADD CONSTRAINT codebases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oauth_accounts oauth_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_accounts
+    ADD CONSTRAINT oauth_accounts_pkey PRIMARY KEY (id);
 
 
 --
@@ -148,6 +197,22 @@ ALTER TABLE ONLY public.codebases
 
 
 --
+-- Name: oauth_accounts uq_oauth_provider_user; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_accounts
+    ADD CONSTRAINT uq_oauth_provider_user UNIQUE (provider, provider_user_id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_analyses_codebase_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -166,6 +231,20 @@ CREATE INDEX idx_analyses_created ON public.analyses USING btree (codebase_id, c
 --
 
 CREATE INDEX idx_codebases_owner_name ON public.codebases USING btree (owner, name);
+
+
+--
+-- Name: idx_oauth_accounts_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oauth_accounts_user_id ON public.oauth_accounts USING btree (user_id);
+
+
+--
+-- Name: idx_oauth_accounts_user_provider; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oauth_accounts_user_provider ON public.oauth_accounts USING btree (user_id, provider);
 
 
 --
@@ -204,6 +283,20 @@ CREATE INDEX idx_test_suites_parent ON public.test_suites USING btree (parent_id
 
 
 --
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_users_email ON public.users USING btree (email) WHERE (email IS NOT NULL);
+
+
+--
+-- Name: idx_users_username; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_username ON public.users USING btree (username);
+
+
+--
 -- Name: uq_analyses_completed_commit; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -216,6 +309,14 @@ CREATE UNIQUE INDEX uq_analyses_completed_commit ON public.analyses USING btree 
 
 ALTER TABLE ONLY public.analyses
     ADD CONSTRAINT fk_analyses_codebase FOREIGN KEY (codebase_id) REFERENCES public.codebases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_accounts fk_oauth_accounts_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_accounts
+    ADD CONSTRAINT fk_oauth_accounts_user FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

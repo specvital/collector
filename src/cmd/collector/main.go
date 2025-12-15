@@ -8,12 +8,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/specvital/collector/internal/adapter/parser"
+	"github.com/specvital/collector/internal/adapter/repository/postgres"
+	"github.com/specvital/collector/internal/adapter/vcs"
+	handler "github.com/specvital/collector/internal/handler/queue"
 	"github.com/specvital/collector/internal/infra/config"
 	"github.com/specvital/collector/internal/infra/db"
 	"github.com/specvital/collector/internal/infra/queue"
-	"github.com/specvital/collector/internal/jobs"
-	"github.com/specvital/collector/internal/repository"
-	"github.com/specvital/collector/internal/service"
+	uc "github.com/specvital/collector/internal/usecase/analysis"
+
+	_ "github.com/specvital/core/pkg/parser/strategies/all"
 )
 
 const (
@@ -59,12 +63,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	analysisRepo := repository.NewPostgresAnalysisRepository(pool)
-	analysisSvc := service.NewAnalysisService(analysisRepo)
+	analysisRepo := postgres.NewAnalysisRepository(pool)
+	gitVCS := vcs.NewGitVCS()
+	coreParser := parser.NewCoreParser()
+
+	analyzeUC := uc.NewAnalyzeUseCase(analysisRepo, gitVCS, coreParser)
 
 	mux := queue.NewServeMux()
-	analyzeHandler := jobs.NewAnalyzeHandler(analysisSvc)
-	mux.HandleFunc(jobs.TypeAnalyze, analyzeHandler.ProcessTask)
+	analyzeHandler := handler.NewAnalyzeHandler(analyzeUC)
+	mux.HandleFunc(handler.TypeAnalyze, analyzeHandler.ProcessTask)
 
 	slog.Info("worker starting", "concurrency", workerConcurrency)
 	if err := srv.Start(mux); err != nil {

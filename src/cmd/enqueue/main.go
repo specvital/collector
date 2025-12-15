@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/hibiken/asynq"
-	"github.com/specvital/collector/internal/jobs"
+	handler "github.com/specvital/collector/internal/handler/queue"
 )
 
 func main() {
@@ -61,7 +61,7 @@ func enqueue(redisURL, owner, repo string) error {
 	client := asynq.NewClient(opt)
 	defer client.Close()
 
-	payload, err := json.Marshal(jobs.AnalyzePayload{
+	payload, err := json.Marshal(handler.AnalyzePayload{
 		Owner: owner,
 		Repo:  repo,
 	})
@@ -69,7 +69,7 @@ func enqueue(redisURL, owner, repo string) error {
 		return fmt.Errorf("marshal payload: %w", err)
 	}
 
-	task := asynq.NewTask(jobs.TypeAnalyze, payload)
+	task := asynq.NewTask(handler.TypeAnalyze, payload)
 	info, err := client.Enqueue(task)
 	if err != nil {
 		return fmt.Errorf("enqueue task: %w", err)

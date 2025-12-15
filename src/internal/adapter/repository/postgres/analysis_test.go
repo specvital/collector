@@ -723,6 +723,7 @@ func TestSaveAnalysisResultParams_Validate(t *testing.T) {
 				Owner:     "owner",
 				Repo:      "repo",
 				CommitSHA: "abc123",
+				Branch:    "main",
 				Result:    &parser.ScanResult{},
 			},
 			wantErr: false,

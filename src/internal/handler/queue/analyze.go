@@ -1,4 +1,4 @@
-package jobs
+package queue
 
 import (
 	"context"
@@ -7,9 +7,8 @@ import (
 	"log/slog"
 
 	"github.com/hibiken/asynq"
-	"github.com/specvital/collector/internal/service"
-
-	_ "github.com/specvital/core/pkg/parser/strategies/all"
+	"github.com/specvital/collector/internal/domain/analysis"
+	uc "github.com/specvital/collector/internal/usecase/analysis"
 )
 
 const TypeAnalyze = "analysis:analyze"
@@ -20,13 +19,11 @@ type AnalyzePayload struct {
 }
 
 type AnalyzeHandler struct {
-	analysisSvc service.AnalysisService
+	analyzeUC *uc.AnalyzeUseCase
 }
 
-func NewAnalyzeHandler(svc service.AnalysisService) *AnalyzeHandler {
-	return &AnalyzeHandler{
-		analysisSvc: svc,
-	}
+func NewAnalyzeHandler(analyzeUC *uc.AnalyzeUseCase) *AnalyzeHandler {
+	return &AnalyzeHandler{analyzeUC: analyzeUC}
 }
 
 func (h *AnalyzeHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
@@ -40,10 +37,12 @@ func (h *AnalyzeHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		"repo", payload.Repo,
 	)
 
-	if err := h.analysisSvc.Analyze(ctx, service.AnalyzeRequest{
+	req := analysis.AnalyzeRequest{
 		Owner: payload.Owner,
 		Repo:  payload.Repo,
-	}); err != nil {
+	}
+
+	if err := h.analyzeUC.Execute(ctx, req); err != nil {
 		slog.ErrorContext(ctx, "analyze task failed",
 			"owner", payload.Owner,
 			"repo", payload.Repo,

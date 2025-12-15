@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/specvital/collector/internal/db"
+	"github.com/specvital/collector/internal/infra/db"
 	"github.com/specvital/core/pkg/domain"
 	"github.com/specvital/core/pkg/parser"
 )
@@ -352,7 +352,7 @@ func (r *PostgresAnalysisRepository) saveSuite(ctx context.Context, queries *db.
 }
 
 const (
-	maxTestCaseNameLength = 2000
+	maxTestCaseNameLength  = 2000
 	maxTestSuiteNameLength = 500
 )
 

@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/specvital/collector/internal/config"
-	"github.com/specvital/collector/internal/db"
+	"github.com/specvital/collector/internal/infra/config"
+	"github.com/specvital/collector/internal/infra/db"
+	"github.com/specvital/collector/internal/infra/queue"
 	"github.com/specvital/collector/internal/jobs"
-	"github.com/specvital/collector/internal/queue"
 	"github.com/specvital/collector/internal/repository"
 	"github.com/specvital/collector/internal/service"
 )

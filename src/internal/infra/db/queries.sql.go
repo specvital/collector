@@ -146,6 +146,32 @@ func (q *Queries) GetCodebaseByID(ctx context.Context, id pgtype.UUID) (Codebasi
 	return i, err
 }
 
+const getOAuthAccountByUserAndProvider = `-- name: GetOAuthAccountByUserAndProvider :one
+SELECT id, user_id, provider, provider_user_id, provider_username, access_token, scope, created_at, updated_at FROM oauth_accounts WHERE user_id = $1 AND provider = $2
+`
+
+type GetOAuthAccountByUserAndProviderParams struct {
+	UserID   pgtype.UUID   `json:"user_id"`
+	Provider OauthProvider `json:"provider"`
+}
+
+func (q *Queries) GetOAuthAccountByUserAndProvider(ctx context.Context, arg GetOAuthAccountByUserAndProviderParams) (OauthAccount, error) {
+	row := q.db.QueryRow(ctx, getOAuthAccountByUserAndProvider, arg.UserID, arg.Provider)
+	var i OauthAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.ProviderUsername,
+		&i.AccessToken,
+		&i.Scope,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTestCasesBySuiteID = `-- name: GetTestCasesBySuiteID :many
 SELECT id, suite_id, name, line_number, status, tags, modifier FROM test_cases WHERE suite_id = $1 ORDER BY line_number
 `

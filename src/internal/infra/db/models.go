@@ -55,6 +55,47 @@ func (ns NullAnalysisStatus) Value() (driver.Value, error) {
 	return string(ns.AnalysisStatus), nil
 }
 
+type OauthProvider string
+
+const (
+	OauthProviderGithub OauthProvider = "github"
+)
+
+func (e *OauthProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OauthProvider(s)
+	case string:
+		*e = OauthProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OauthProvider: %T", src)
+	}
+	return nil
+}
+
+type NullOauthProvider struct {
+	OauthProvider OauthProvider `json:"oauth_provider"`
+	Valid         bool          `json:"valid"` // Valid is true if OauthProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOauthProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.OauthProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OauthProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOauthProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OauthProvider), nil
+}
+
 type TestStatus string
 
 const (
@@ -124,6 +165,18 @@ type Codebasis struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type OauthAccount struct {
+	ID               pgtype.UUID        `json:"id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	Provider         OauthProvider      `json:"provider"`
+	ProviderUserID   string             `json:"provider_user_id"`
+	ProviderUsername pgtype.Text        `json:"provider_username"`
+	AccessToken      pgtype.Text        `json:"access_token"`
+	Scope            pgtype.Text        `json:"scope"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type TestCase struct {
 	ID         pgtype.UUID `json:"id"`
 	SuiteID    pgtype.UUID `json:"suite_id"`
@@ -143,4 +196,14 @@ type TestSuite struct {
 	LineNumber pgtype.Int4 `json:"line_number"`
 	Framework  pgtype.Text `json:"framework"`
 	Depth      int32       `json:"depth"`
+}
+
+type User struct {
+	ID          pgtype.UUID        `json:"id"`
+	Email       pgtype.Text        `json:"email"`
+	Username    string             `json:"username"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	LastLoginAt pgtype.Timestamptz `json:"last_login_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }

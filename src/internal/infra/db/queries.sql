@@ -40,3 +40,6 @@ SELECT * FROM test_suites WHERE analysis_id = $1 ORDER BY file_path, line_number
 
 -- name: GetTestCasesBySuiteID :many
 SELECT * FROM test_cases WHERE suite_id = $1 ORDER BY line_number;
+
+-- name: GetOAuthAccountByUserAndProvider :one
+SELECT * FROM oauth_accounts WHERE user_id = $1 AND provider = $2;

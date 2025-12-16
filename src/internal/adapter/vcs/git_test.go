@@ -15,7 +15,7 @@ func TestNewGitVCS(t *testing.T) {
 
 func TestGitVCS_Clone_EmptyURL(t *testing.T) {
 	vcs := NewGitVCS()
-	_, err := vcs.Clone(context.Background(), "")
+	_, err := vcs.Clone(context.Background(), "", nil)
 	if err == nil {
 		t.Fatal("expected error for empty URL")
 	}

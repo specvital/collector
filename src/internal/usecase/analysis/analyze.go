@@ -171,7 +171,7 @@ func (uc *AnalyzeUseCase) cloneWithSemaphore(ctx context.Context, url string) (a
 	}
 	defer uc.cloneSem.Release(1)
 
-	return uc.vcs.Clone(ctx, url)
+	return uc.vcs.Clone(ctx, url, nil)
 }
 
 func (uc *AnalyzeUseCase) closeSource(src analysis.Source, owner, repo string) {

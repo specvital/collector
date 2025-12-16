@@ -19,12 +19,22 @@ func NewGitVCS() *GitVCS {
 }
 
 // Clone implements analysis.VCS by cloning a Git repository.
-func (v *GitVCS) Clone(ctx context.Context, url string) (analysis.Source, error) {
+func (v *GitVCS) Clone(ctx context.Context, url string, token *string) (analysis.Source, error) {
 	if url == "" {
 		return nil, fmt.Errorf("clone repository: URL is required")
 	}
 
-	gitSrc, err := source.NewGitSource(ctx, url, nil)
+	var opts *source.GitOptions
+	if token != nil {
+		opts = &source.GitOptions{
+			Credentials: &source.GitCredentials{
+				Username: "x-access-token",
+				Password: *token,
+			},
+		}
+	}
+
+	gitSrc, err := source.NewGitSource(ctx, url, opts)
 	if err != nil {
 		return nil, fmt.Errorf("clone repository %q: %w", url, err)
 	}

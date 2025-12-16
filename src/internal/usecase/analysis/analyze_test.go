@@ -12,12 +12,12 @@ import (
 // Mock implementations
 
 type mockVCS struct {
-	cloneFn func(ctx context.Context, url string) (analysis.Source, error)
+	cloneFn func(ctx context.Context, url string, token *string) (analysis.Source, error)
 }
 
-func (m *mockVCS) Clone(ctx context.Context, url string) (analysis.Source, error) {
+func (m *mockVCS) Clone(ctx context.Context, url string, token *string) (analysis.Source, error) {
 	if m.cloneFn != nil {
-		return m.cloneFn(ctx, url)
+		return m.cloneFn(ctx, url, token)
 	}
 	return nil, nil
 }
@@ -99,7 +99,7 @@ func newSuccessfulSource() *mockSource {
 
 func newSuccessfulVCS(src analysis.Source) *mockVCS {
 	return &mockVCS{
-		cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+		cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 			return src, nil
 		},
 	}
@@ -189,7 +189,7 @@ func TestAnalyzeUseCase_Execute(t *testing.T) {
 			request: newValidRequest(),
 			setupMocks: func() (*mockVCS, *mockParser, *mockRepository) {
 				vcs := &mockVCS{
-					cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+					cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 						return nil, errors.New("git clone failed")
 					},
 				}
@@ -395,7 +395,7 @@ func TestAnalyzeUseCase_Execute_Timeout(t *testing.T) {
 	t.Run("timeout - context timeout triggers during execution", func(t *testing.T) {
 		src := newSuccessfulSource()
 		vcs := &mockVCS{
-			cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 				select {
 				case <-time.After(200 * time.Millisecond):
 					return src, nil

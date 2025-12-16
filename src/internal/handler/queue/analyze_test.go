@@ -14,12 +14,12 @@ import (
 // Mock implementations for testing
 
 type mockVCS struct {
-	cloneFn func(ctx context.Context, url string) (analysis.Source, error)
+	cloneFn func(ctx context.Context, url string, token *string) (analysis.Source, error)
 }
 
-func (m *mockVCS) Clone(ctx context.Context, url string) (analysis.Source, error) {
+func (m *mockVCS) Clone(ctx context.Context, url string, token *string) (analysis.Source, error) {
 	if m.cloneFn != nil {
-		return m.cloneFn(ctx, url)
+		return m.cloneFn(ctx, url, token)
 	}
 	return nil, nil
 }
@@ -99,7 +99,7 @@ func newSuccessfulMocks() (*mockRepository, *mockVCS, *mockParser) {
 	}
 
 	vcs := &mockVCS{
-		cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+		cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 			return src, nil
 		},
 	}
@@ -166,7 +166,7 @@ func TestAnalyzeHandler_ProcessTask(t *testing.T) {
 			setupMocks: func() (*mockRepository, *mockVCS, *mockParser) {
 				repo, _, parser := newSuccessfulMocks()
 				vcs := &mockVCS{
-					cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+					cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 						return nil, errors.New("git clone failed")
 					},
 				}
@@ -353,7 +353,7 @@ func TestAnalyzeHandler_ProcessTask_ServiceInvocation(t *testing.T) {
 		}
 
 		vcs := &mockVCS{
-			cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 				// Extract owner/repo from URL
 				if containsString(url, "test-owner/test-repo") {
 					capturedOwner = "test-owner"
@@ -394,7 +394,7 @@ func TestAnalyzeHandler_ProcessTask_ServiceInvocation(t *testing.T) {
 		repo, _, parser := newSuccessfulMocks()
 
 		vcs := &mockVCS{
-			cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 				useCaseCalled = true
 				return nil, errors.New("should not be called")
 			},
@@ -432,7 +432,7 @@ func TestAnalyzeHandler_ProcessTask_ContextPropagation(t *testing.T) {
 		}
 
 		vcs := &mockVCS{
-			cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 				capturedCtx = ctx
 				return src, nil
 			},
@@ -468,7 +468,7 @@ func TestAnalyzeHandler_ProcessTask_ContextPropagation(t *testing.T) {
 	t.Run("should propagate cancelled context", func(t *testing.T) {
 		repo, _, parser := newSuccessfulMocks()
 		vcs := &mockVCS{
-			cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 				// Should not reach here because semaphore.Acquire will fail first
 				return nil, ctx.Err()
 			},
@@ -513,7 +513,7 @@ func TestAnalyzeHandler_ProcessTask_ErrorPropagation(t *testing.T) {
 			setupMock: func() (*mockRepository, *mockVCS, *mockParser) {
 				repo, _, parser := newSuccessfulMocks()
 				vcs := &mockVCS{
-					cloneFn: func(ctx context.Context, url string) (analysis.Source, error) {
+					cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
 						return nil, errors.New("clone error")
 					},
 				}

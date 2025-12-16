@@ -6,8 +6,9 @@ import (
 )
 
 type AnalyzeRequest struct {
-	Owner string
-	Repo  string
+	Owner  string
+	Repo   string
+	UserID *string
 }
 
 func (r AnalyzeRequest) Validate() error {

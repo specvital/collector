@@ -12,12 +12,13 @@ import (
 )
 
 const createAnalysis = `-- name: CreateAnalysis :one
-INSERT INTO analyses (codebase_id, commit_sha, branch_name, status, started_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO analyses (id, codebase_id, commit_sha, branch_name, status, started_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, codebase_id, commit_sha, branch_name, status, error_message, started_at, completed_at, created_at, total_suites, total_tests
 `
 
 type CreateAnalysisParams struct {
+	ID         pgtype.UUID        `json:"id"`
 	CodebaseID pgtype.UUID        `json:"codebase_id"`
 	CommitSha  string             `json:"commit_sha"`
 	BranchName pgtype.Text        `json:"branch_name"`
@@ -27,6 +28,7 @@ type CreateAnalysisParams struct {
 
 func (q *Queries) CreateAnalysis(ctx context.Context, arg CreateAnalysisParams) (Analysis, error) {
 	row := q.db.QueryRow(ctx, createAnalysis,
+		arg.ID,
 		arg.CodebaseID,
 		arg.CommitSha,
 		arg.BranchName,

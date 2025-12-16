@@ -6,9 +6,10 @@ import (
 )
 
 type AnalyzeRequest struct {
-	Owner  string
-	Repo   string
-	UserID *string
+	AnalysisID *string
+	Owner      string
+	Repo       string
+	UserID     *string
 }
 
 func (r AnalyzeRequest) Validate() error {
@@ -23,6 +24,11 @@ func (r AnalyzeRequest) Validate() error {
 	}
 	if !isValidGitHubName(r.Owner) || !isValidGitHubName(r.Repo) {
 		return fmt.Errorf("%w: invalid characters in owner/repo", ErrInvalidInput)
+	}
+	if r.AnalysisID != nil {
+		if _, err := ParseUUID(*r.AnalysisID); err != nil {
+			return fmt.Errorf("%w: invalid analysis ID format", ErrInvalidInput)
+		}
 	}
 	return nil
 }

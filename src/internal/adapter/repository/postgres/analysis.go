@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/specvital/collector/internal/domain/analysis"
@@ -94,7 +95,13 @@ func (r *AnalysisRepository) CreateAnalysisRecord(ctx context.Context, params an
 		return analysis.NilUUID, fmt.Errorf("upsert codebase: %w", err)
 	}
 
+	analysisID := analysis.NewUUID()
+	if params.AnalysisID != nil {
+		analysisID = *params.AnalysisID
+	}
+
 	dbAnalysis, err := queries.CreateAnalysis(ctx, db.CreateAnalysisParams{
+		ID:         toPgUUID(analysisID),
 		CodebaseID: codebase.ID,
 		CommitSha:  params.CommitSHA,
 		BranchName: pgtype.Text{String: params.Branch, Valid: params.Branch != ""},
@@ -102,6 +109,10 @@ func (r *AnalysisRepository) CreateAnalysisRecord(ctx context.Context, params an
 		StartedAt:  pgtype.Timestamptz{Time: startedAt, Valid: true},
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return analysis.NilUUID, fmt.Errorf("%w: analysis ID already exists", analysis.ErrInvalidInput)
+		}
 		return analysis.NilUUID, fmt.Errorf("create analysis: %w", err)
 	}
 

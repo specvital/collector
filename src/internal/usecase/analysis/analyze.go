@@ -121,6 +121,13 @@ func (uc *AnalyzeUseCase) Execute(ctx context.Context, req analysis.AnalyzeReque
 		Owner:     req.Owner,
 		Repo:      req.Repo,
 	}
+	if req.AnalysisID != nil {
+		parsedID, parseErr := analysis.ParseUUID(*req.AnalysisID)
+		if parseErr != nil {
+			return fmt.Errorf("%w: invalid analysis ID: %w", analysis.ErrInvalidInput, parseErr)
+		}
+		createParams.AnalysisID = &parsedID
+	}
 	if err = createParams.Validate(); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveFailed, err)
 	}

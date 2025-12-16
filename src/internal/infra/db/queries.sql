@@ -11,8 +11,8 @@ RETURNING *;
 SELECT * FROM codebases WHERE id = $1;
 
 -- name: CreateAnalysis :one
-INSERT INTO analyses (codebase_id, commit_sha, branch_name, status, started_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO analyses (id, codebase_id, commit_sha, branch_name, status, started_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: UpdateAnalysisCompleted :exec

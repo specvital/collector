@@ -8,10 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/specvital/collector/internal/domain/analysis"
 	"github.com/specvital/collector/internal/infra/db"
 )
 
-var ErrTokenNotFound = errors.New("oauth token not found")
+var _ analysis.TokenLookup = (*UserRepository)(nil)
 
 type UserRepository struct {
 	pool *pgxpool.Pool
@@ -41,13 +43,13 @@ func (r *UserRepository) GetOAuthToken(ctx context.Context, userID string, provi
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", ErrTokenNotFound
+			return "", analysis.ErrTokenNotFound
 		}
 		return "", fmt.Errorf("query oauth account: %w", err)
 	}
 
 	if !account.AccessToken.Valid || account.AccessToken.String == "" {
-		return "", ErrTokenNotFound
+		return "", analysis.ErrTokenNotFound
 	}
 
 	return account.AccessToken.String, nil

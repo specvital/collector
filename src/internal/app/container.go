@@ -34,9 +34,10 @@ func NewContainer(cfg ContainerConfig) (*Container, error) {
 	}
 
 	analysisRepo := postgres.NewAnalysisRepository(cfg.Pool)
+	userRepo := postgres.NewUserRepository(cfg.Pool)
 	gitVCS := vcs.NewGitVCS()
 	coreParser := parser.NewCoreParser()
-	analyzeUC := uc.NewAnalyzeUseCase(analysisRepo, gitVCS, coreParser)
+	analyzeUC := uc.NewAnalyzeUseCase(analysisRepo, gitVCS, coreParser, userRepo)
 	analyzeHandler := queue.NewAnalyzeHandler(analyzeUC)
 
 	return &Container{

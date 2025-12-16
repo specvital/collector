@@ -66,6 +66,17 @@ type mockRepository struct {
 	saveAnalysisInventoryFn func(ctx context.Context, params analysis.SaveAnalysisInventoryParams) error
 }
 
+type mockTokenLookup struct {
+	getOAuthTokenFn func(ctx context.Context, userID string, provider string) (string, error)
+}
+
+func (m *mockTokenLookup) GetOAuthToken(ctx context.Context, userID string, provider string) (string, error) {
+	if m.getOAuthTokenFn != nil {
+		return m.getOAuthTokenFn(ctx, userID, provider)
+	}
+	return "", nil
+}
+
 func (m *mockRepository) CreateAnalysisRecord(ctx context.Context, params analysis.CreateAnalysisRecordParams) (analysis.UUID, error) {
 	if m.createAnalysisRecordFn != nil {
 		return m.createAnalysisRecordFn(ctx, params)
@@ -366,7 +377,7 @@ func TestAnalyzeUseCase_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vcs, parser, repo := tt.setupMocks()
-			uc := NewAnalyzeUseCase(repo, vcs, parser)
+			uc := NewAnalyzeUseCase(repo, vcs, parser, nil)
 
 			err := uc.Execute(context.Background(), tt.request)
 
@@ -408,7 +419,7 @@ func TestAnalyzeUseCase_Execute_Timeout(t *testing.T) {
 		repo := &mockRepository{}
 		parser := &mockParser{}
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser, WithAnalysisTimeout(50*time.Millisecond))
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil, WithAnalysisTimeout(50*time.Millisecond))
 
 		err := uc.Execute(context.Background(), newValidRequest())
 
@@ -459,7 +470,7 @@ func TestAnalyzeUseCase_Options(t *testing.T) {
 			vcs := &mockVCS{}
 			parser := &mockParser{}
 
-			uc := NewAnalyzeUseCase(repo, vcs, parser, tt.opts...)
+			uc := NewAnalyzeUseCase(repo, vcs, parser, nil, tt.opts...)
 
 			if uc.timeout != tt.expectedTimeout {
 				t.Errorf("expected timeout %v, got %v", tt.expectedTimeout, uc.timeout)
@@ -474,7 +485,7 @@ func TestAnalyzeUseCase_MaxConcurrentClones(t *testing.T) {
 		vcs := &mockVCS{}
 		parser := &mockParser{}
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser, WithMaxConcurrentClones(5))
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil, WithMaxConcurrentClones(5))
 
 		if uc.cloneSem == nil {
 			t.Error("expected cloneSem to be initialized")
@@ -486,7 +497,7 @@ func TestAnalyzeUseCase_MaxConcurrentClones(t *testing.T) {
 		vcs := &mockVCS{}
 		parser := &mockParser{}
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser, WithMaxConcurrentClones(0))
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil, WithMaxConcurrentClones(0))
 
 		if uc.cloneSem == nil {
 			t.Error("expected cloneSem to be initialized with default")
@@ -498,7 +509,7 @@ func TestAnalyzeUseCase_MaxConcurrentClones(t *testing.T) {
 		vcs := &mockVCS{}
 		parser := &mockParser{}
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser, WithMaxConcurrentClones(-1))
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil, WithMaxConcurrentClones(-1))
 
 		if uc.cloneSem == nil {
 			t.Error("expected cloneSem to be initialized with default")
@@ -519,7 +530,7 @@ func TestAnalyzeUseCase_SourceCleanup(t *testing.T) {
 		repo := newSuccessfulRepository()
 		parser := newSuccessfulParser()
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser)
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil)
 
 		err := uc.Execute(context.Background(), newValidRequest())
 
@@ -557,7 +568,7 @@ func TestAnalyzeUseCase_SourceCleanup(t *testing.T) {
 			},
 		}
 
-		uc := NewAnalyzeUseCase(repo, vcs, parser)
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil)
 
 		err := uc.Execute(context.Background(), newValidRequest())
 
@@ -566,6 +577,241 @@ func TestAnalyzeUseCase_SourceCleanup(t *testing.T) {
 		}
 		if !closeCalled {
 			t.Error("expected Close to be called even on failure")
+		}
+	})
+}
+
+func TestAnalyzeUseCase_TokenLookup(t *testing.T) {
+	t.Run("token lookup success - token passed to VCS Clone", func(t *testing.T) {
+		var capturedToken *string
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				capturedToken = token
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		expectedToken := "test-oauth-token"
+		tokenLookup := &mockTokenLookup{
+			getOAuthTokenFn: func(ctx context.Context, userID string, provider string) (string, error) {
+				if userID != "user-123" {
+					t.Errorf("expected userID 'user-123', got '%s'", userID)
+				}
+				if provider != DefaultOAuthProvider {
+					t.Errorf("expected provider '%s', got '%s'", DefaultOAuthProvider, provider)
+				}
+				return expectedToken, nil
+			},
+		}
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, tokenLookup)
+
+		userID := "user-123"
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: &userID,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if capturedToken == nil {
+			t.Error("expected token to be passed to VCS Clone, got nil")
+		} else if *capturedToken != expectedToken {
+			t.Errorf("expected token '%s', got '%s'", expectedToken, *capturedToken)
+		}
+	})
+
+	t.Run("no userID - token is nil", func(t *testing.T) {
+		var capturedToken *string
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				capturedToken = token
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		tokenLookupCalled := false
+		tokenLookup := &mockTokenLookup{
+			getOAuthTokenFn: func(ctx context.Context, userID string, provider string) (string, error) {
+				tokenLookupCalled = true
+				return "token", nil
+			},
+		}
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, tokenLookup)
+
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: nil,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if tokenLookupCalled {
+			t.Error("token lookup should not be called when userID is nil")
+		}
+		if capturedToken != nil {
+			t.Error("expected token to be nil when no userID provided")
+		}
+	})
+
+	t.Run("token not found - graceful degradation to public access", func(t *testing.T) {
+		var capturedToken *string
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				capturedToken = token
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		tokenLookup := &mockTokenLookup{
+			getOAuthTokenFn: func(ctx context.Context, userID string, provider string) (string, error) {
+				return "", analysis.ErrTokenNotFound
+			},
+		}
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, tokenLookup)
+
+		userID := "user-123"
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: &userID,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if capturedToken != nil {
+			t.Error("expected token to be nil when token not found")
+		}
+	})
+
+	t.Run("token lookup infrastructure error - fails with ErrTokenLookupFailed", func(t *testing.T) {
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		tokenLookup := &mockTokenLookup{
+			getOAuthTokenFn: func(ctx context.Context, userID string, provider string) (string, error) {
+				return "", errors.New("database connection failed")
+			},
+		}
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, tokenLookup)
+
+		userID := "user-123"
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: &userID,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if !errors.Is(err, ErrTokenLookupFailed) {
+			t.Errorf("expected ErrTokenLookupFailed, got %v", err)
+		}
+	})
+
+	t.Run("empty token returned - graceful degradation to public access", func(t *testing.T) {
+		var capturedToken *string
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				capturedToken = token
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		tokenLookup := &mockTokenLookup{
+			getOAuthTokenFn: func(ctx context.Context, userID string, provider string) (string, error) {
+				return "", nil // empty token with no error
+			},
+		}
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, tokenLookup)
+
+		userID := "user-123"
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: &userID,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if capturedToken != nil {
+			t.Error("expected token to be nil when empty token returned")
+		}
+	})
+
+	t.Run("nil tokenLookup - proceeds without token", func(t *testing.T) {
+		var capturedToken *string
+		src := newSuccessfulSource()
+
+		vcs := &mockVCS{
+			cloneFn: func(ctx context.Context, url string, token *string) (analysis.Source, error) {
+				capturedToken = token
+				return src, nil
+			},
+		}
+		repo := newSuccessfulRepository()
+		parser := newSuccessfulParser()
+
+		uc := NewAnalyzeUseCase(repo, vcs, parser, nil)
+
+		userID := "user-123"
+		req := analysis.AnalyzeRequest{
+			Owner:  "testowner",
+			Repo:   "testrepo",
+			UserID: &userID,
+		}
+
+		err := uc.Execute(context.Background(), req)
+
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if capturedToken != nil {
+			t.Error("expected token to be nil when tokenLookup is nil")
 		}
 	})
 }

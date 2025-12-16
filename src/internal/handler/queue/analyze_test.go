@@ -126,7 +126,7 @@ func newSuccessfulMocks() (*mockRepository, *mockVCS, *mockParser) {
 
 func TestNewAnalyzeHandler(t *testing.T) {
 	repo, vcs, parser := newSuccessfulMocks()
-	analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+	analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 
 	handler := NewAnalyzeHandler(analyzeUC)
 
@@ -252,7 +252,7 @@ func TestAnalyzeHandler_ProcessTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo, vcs, parser := tt.setupMocks()
-			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 			handler := NewAnalyzeHandler(analyzeUC)
 
 			payloadBytes, err := json.Marshal(tt.payload)
@@ -322,7 +322,7 @@ func TestAnalyzeHandler_ProcessTask_InvalidPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo, vcs, parser := newSuccessfulMocks()
-			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 			handler := NewAnalyzeHandler(analyzeUC)
 
 			task := asynq.NewTask(TypeAnalyze, tt.payload)
@@ -363,7 +363,7 @@ func TestAnalyzeHandler_ProcessTask_ServiceInvocation(t *testing.T) {
 			},
 		}
 
-		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 		handler := NewAnalyzeHandler(analyzeUC)
 
 		payload := AnalyzePayload{
@@ -400,7 +400,7 @@ func TestAnalyzeHandler_ProcessTask_ServiceInvocation(t *testing.T) {
 			},
 		}
 
-		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 		handler := NewAnalyzeHandler(analyzeUC)
 
 		task := asynq.NewTask(TypeAnalyze, []byte(`invalid json`))
@@ -438,7 +438,7 @@ func TestAnalyzeHandler_ProcessTask_ContextPropagation(t *testing.T) {
 			},
 		}
 
-		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 		handler := NewAnalyzeHandler(analyzeUC)
 
 		payload := AnalyzePayload{
@@ -474,7 +474,7 @@ func TestAnalyzeHandler_ProcessTask_ContextPropagation(t *testing.T) {
 			},
 		}
 
-		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+		analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 		handler := NewAnalyzeHandler(analyzeUC)
 
 		payload := AnalyzePayload{
@@ -576,7 +576,7 @@ func TestAnalyzeHandler_ProcessTask_ErrorPropagation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo, vcs, parser := tt.setupMock()
-			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser)
+			analyzeUC := uc.NewAnalyzeUseCase(repo, vcs, parser, nil)
 			handler := NewAnalyzeHandler(analyzeUC)
 
 			var payload AnalyzePayload

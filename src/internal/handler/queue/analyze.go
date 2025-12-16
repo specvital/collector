@@ -14,8 +14,9 @@ import (
 const TypeAnalyze = "analysis:analyze"
 
 type AnalyzePayload struct {
-	Owner string `json:"owner"`
-	Repo  string `json:"repo"`
+	Owner  string  `json:"owner"`
+	Repo   string  `json:"repo"`
+	UserID *string `json:"user_id,omitempty"`
 }
 
 type AnalyzeHandler struct {
@@ -38,8 +39,9 @@ func (h *AnalyzeHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	)
 
 	req := analysis.AnalyzeRequest{
-		Owner: payload.Owner,
-		Repo:  payload.Repo,
+		Owner:  payload.Owner,
+		Repo:   payload.Repo,
+		UserID: payload.UserID,
 	}
 
 	if err := h.analyzeUC.Execute(ctx, req); err != nil {

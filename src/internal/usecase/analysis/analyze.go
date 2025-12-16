@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -14,15 +15,19 @@ import (
 const (
 	DefaultMaxConcurrentClones = 2
 	DefaultAnalysisTimeout     = 15 * time.Minute
+	// DefaultOAuthProvider is the OAuth provider for VCS authentication.
+	// Currently only GitHub is supported as the VCS provider (see repoURL construction in Execute).
+	DefaultOAuthProvider = "github"
 )
 
 // AnalyzeUseCase orchestrates repository analysis workflow.
 type AnalyzeUseCase struct {
-	cloneSem   *semaphore.Weighted
-	parser     analysis.Parser
-	repository analysis.Repository
-	timeout    time.Duration
-	vcs        analysis.VCS
+	cloneSem    *semaphore.Weighted
+	parser      analysis.Parser
+	repository  analysis.Repository
+	timeout     time.Duration
+	tokenLookup analysis.TokenLookup
+	vcs         analysis.VCS
 }
 
 // Config holds configuration for AnalyzeUseCase.
@@ -55,10 +60,12 @@ func WithMaxConcurrentClones(n int64) Option {
 }
 
 // NewAnalyzeUseCase creates a new AnalyzeUseCase with given dependencies.
+// tokenLookup is optional - if nil, all clones use public access (token=nil).
 func NewAnalyzeUseCase(
 	repository analysis.Repository,
 	vcs analysis.VCS,
 	parser analysis.Parser,
+	tokenLookup analysis.TokenLookup,
 	opts ...Option,
 ) *AnalyzeUseCase {
 	cfg := Config{
@@ -71,11 +78,12 @@ func NewAnalyzeUseCase(
 	}
 
 	return &AnalyzeUseCase{
-		cloneSem:   semaphore.NewWeighted(cfg.MaxConcurrentClones),
-		parser:     parser,
-		repository: repository,
-		timeout:    cfg.AnalysisTimeout,
-		vcs:        vcs,
+		cloneSem:    semaphore.NewWeighted(cfg.MaxConcurrentClones),
+		parser:      parser,
+		repository:  repository,
+		timeout:     cfg.AnalysisTimeout,
+		tokenLookup: tokenLookup,
+		vcs:         vcs,
 	}
 }
 
@@ -96,7 +104,12 @@ func (uc *AnalyzeUseCase) Execute(ctx context.Context, req analysis.AnalyzeReque
 
 	repoURL := fmt.Sprintf("https://github.com/%s/%s", req.Owner, req.Repo)
 
-	src, err := uc.cloneWithSemaphore(timeoutCtx, repoURL)
+	token, err := uc.lookupToken(timeoutCtx, req.UserID)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrTokenLookupFailed, err)
+	}
+
+	src, err := uc.cloneWithSemaphore(timeoutCtx, repoURL, token)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCloneFailed, err)
 	}
@@ -165,13 +178,48 @@ func (uc *AnalyzeUseCase) Execute(ctx context.Context, req analysis.AnalyzeReque
 	return nil
 }
 
-func (uc *AnalyzeUseCase) cloneWithSemaphore(ctx context.Context, url string) (analysis.Source, error) {
+func (uc *AnalyzeUseCase) cloneWithSemaphore(ctx context.Context, url string, token *string) (analysis.Source, error) {
 	if err := uc.cloneSem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
 	defer uc.cloneSem.Release(1)
 
-	return uc.vcs.Clone(ctx, url, nil)
+	return uc.vcs.Clone(ctx, url, token)
+}
+
+// lookupToken retrieves OAuth token for the given user.
+//
+// Returns:
+//   - (nil, nil): no userID provided, tokenLookup not configured, or token not found (graceful degradation)
+//   - (*token, nil): token found successfully
+//   - (nil, error): infrastructure error (should fail the operation)
+//
+// Token not found (analysis.ErrTokenNotFound) triggers graceful degradation and is logged at INFO level.
+// Infrastructure errors are returned to fail the operation.
+func (uc *AnalyzeUseCase) lookupToken(ctx context.Context, userID *string) (*string, error) {
+	if userID == nil || uc.tokenLookup == nil {
+		return nil, nil
+	}
+
+	token, err := uc.tokenLookup.GetOAuthToken(ctx, *userID, DefaultOAuthProvider)
+	if err != nil {
+		if errors.Is(err, analysis.ErrTokenNotFound) {
+			slog.InfoContext(ctx, "no OAuth token found, using public access",
+				"user_id", *userID,
+			)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to lookup OAuth token for user %s: %w", *userID, err)
+	}
+
+	if token == "" {
+		slog.WarnContext(ctx, "empty token returned, using public access",
+			"user_id", *userID,
+		)
+		return nil, nil
+	}
+
+	return &token, nil
 }
 
 func (uc *AnalyzeUseCase) closeSource(src analysis.Source, owner, repo string) {

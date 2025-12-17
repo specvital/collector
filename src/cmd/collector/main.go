@@ -23,9 +23,10 @@ func main() {
 	}
 
 	if err := bootstrap.StartWorker(bootstrap.WorkerConfig{
-		ServiceName: "collector",
-		DatabaseURL: cfg.DatabaseURL,
-		RedisURL:    cfg.RedisURL,
+		ServiceName:   "collector",
+		DatabaseURL:   cfg.DatabaseURL,
+		EncryptionKey: cfg.EncryptionKey,
+		RedisURL:      cfg.RedisURL,
 	}); err != nil {
 		slog.Error("collector failed", "error", err)
 		os.Exit(1)

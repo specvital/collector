@@ -14,6 +14,7 @@ import (
 	infrascheduler "github.com/specvital/collector/internal/infra/scheduler"
 	uc "github.com/specvital/collector/internal/usecase/analysis"
 	"github.com/specvital/collector/internal/usecase/autorefresh"
+	"github.com/specvital/core/pkg/crypto"
 )
 
 const (
@@ -22,8 +23,9 @@ const (
 )
 
 type ContainerConfig struct {
-	Pool     *pgxpool.Pool
-	RedisURL string
+	EncryptionKey string
+	Pool          *pgxpool.Pool
+	RedisURL      string
 }
 
 func (c ContainerConfig) Validate() error {
@@ -36,18 +38,33 @@ func (c ContainerConfig) Validate() error {
 	return nil
 }
 
+func (c ContainerConfig) ValidateWorker() error {
+	if err := c.Validate(); err != nil {
+		return err
+	}
+	if c.EncryptionKey == "" {
+		return fmt.Errorf("encryption key is required")
+	}
+	return nil
+}
+
 type WorkerContainer struct {
 	AnalyzeHandler *queue.AnalyzeHandler
 	QueueClient    *infraqueue.Client
 }
 
 func NewWorkerContainer(cfg ContainerConfig) (*WorkerContainer, error) {
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateWorker(); err != nil {
 		return nil, fmt.Errorf("invalid container config: %w", err)
 	}
 
+	encryptor, err := crypto.NewEncryptorFromBase64(cfg.EncryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("create encryptor: %w", err)
+	}
+
 	analysisRepo := postgres.NewAnalysisRepository(cfg.Pool)
-	userRepo := postgres.NewUserRepository(cfg.Pool)
+	userRepo := postgres.NewUserRepository(cfg.Pool, encryptor)
 	gitVCS := vcs.NewGitVCS()
 	coreParser := parser.NewCoreParser()
 	analyzeUC := uc.NewAnalyzeUseCase(analysisRepo, gitVCS, coreParser, userRepo)

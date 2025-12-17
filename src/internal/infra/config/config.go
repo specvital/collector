@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	RedisURL    string
+	DatabaseURL   string
+	EncryptionKey string
+	RedisURL      string
 }
 
 func Load() (*Config, error) {
@@ -16,13 +17,19 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL is required")
 	}
 
+	encryptionKey := os.Getenv("ENCRYPTION_KEY")
+	if encryptionKey == "" {
+		return nil, errors.New("ENCRYPTION_KEY is required")
+	}
+
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
 		return nil, errors.New("REDIS_URL is required")
 	}
 
 	return &Config{
-		DatabaseURL: databaseURL,
-		RedisURL:    redisURL,
+		DatabaseURL:   databaseURL,
+		EncryptionKey: encryptionKey,
+		RedisURL:      redisURL,
 	}, nil
 }

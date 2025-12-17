@@ -24,6 +24,7 @@ type WorkerConfig struct {
 	Concurrency     int
 	ShutdownTimeout time.Duration
 	DatabaseURL     string
+	EncryptionKey   string
 	RedisURL        string
 }
 
@@ -33,6 +34,9 @@ func (c *WorkerConfig) Validate() error {
 	}
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("database URL is required")
+	}
+	if c.EncryptionKey == "" {
+		return fmt.Errorf("encryption key is required")
 	}
 	if c.RedisURL == "" {
 		return fmt.Errorf("redis URL is required")
@@ -84,8 +88,9 @@ func StartWorker(cfg WorkerConfig) error {
 	}
 
 	container, err := app.NewWorkerContainer(app.ContainerConfig{
-		Pool:     pool,
-		RedisURL: cfg.RedisURL,
+		EncryptionKey: cfg.EncryptionKey,
+		Pool:          pool,
+		RedisURL:      cfg.RedisURL,
 	})
 	if err != nil {
 		return fmt.Errorf("container: %w", err)

@@ -9,10 +9,28 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/specvital/collector/internal/domain/analysis"
+	"github.com/specvital/core/pkg/crypto"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+// passthroughEncryptor returns input as-is for testing without real encryption.
+type passthroughEncryptor struct{}
+
+func (e *passthroughEncryptor) Encrypt(plaintext string) (string, error) {
+	return plaintext, nil
+}
+
+func (e *passthroughEncryptor) Decrypt(ciphertext string) (string, error) {
+	return ciphertext, nil
+}
+
+func (e *passthroughEncryptor) Close() error {
+	return nil
+}
+
+var _ crypto.Encryptor = (*passthroughEncryptor)(nil)
 
 func setupUserTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	t.Helper()
@@ -121,7 +139,7 @@ func TestUserRepository_GetOAuthToken(t *testing.T) {
 	pool, cleanup := setupUserTestDB(t)
 	defer cleanup()
 
-	repo := NewUserRepository(pool)
+	repo := NewUserRepository(pool, &passthroughEncryptor{})
 	ctx := context.Background()
 
 	t.Run("should return token for valid user and provider", func(t *testing.T) {
@@ -248,7 +266,7 @@ func TestUserRepository_GetOAuthToken(t *testing.T) {
 }
 
 func TestNewUserRepository(t *testing.T) {
-	repo := NewUserRepository(nil)
+	repo := NewUserRepository(nil, &passthroughEncryptor{})
 	if repo == nil {
 		t.Error("expected non-nil repository, got nil")
 	}

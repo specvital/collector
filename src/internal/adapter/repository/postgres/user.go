@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/specvital/core/pkg/crypto"
 
 	"github.com/specvital/collector/internal/domain/analysis"
 	"github.com/specvital/collector/internal/infra/db"
@@ -16,11 +17,15 @@ import (
 var _ analysis.TokenLookup = (*UserRepository)(nil)
 
 type UserRepository struct {
-	pool *pgxpool.Pool
+	encryptor crypto.Encryptor
+	pool      *pgxpool.Pool
 }
 
-func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
-	return &UserRepository{pool: pool}
+func NewUserRepository(pool *pgxpool.Pool, encryptor crypto.Encryptor) *UserRepository {
+	return &UserRepository{
+		encryptor: encryptor,
+		pool:      pool,
+	}
 }
 
 func (r *UserRepository) GetOAuthToken(ctx context.Context, userID string, provider string) (string, error) {
@@ -52,5 +57,10 @@ func (r *UserRepository) GetOAuthToken(ctx context.Context, userID string, provi
 		return "", analysis.ErrTokenNotFound
 	}
 
-	return account.AccessToken.String, nil
+	decrypted, err := r.encryptor.Decrypt(account.AccessToken.String)
+	if err != nil {
+		return "", fmt.Errorf("decrypt access token: %w", err)
+	}
+
+	return decrypted, nil
 }

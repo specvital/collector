@@ -1,5 +1,11 @@
 ## 🎯 Highlights
 
+### 🐛 Bug Fixes
+
+- enable CGO for go-tree-sitter build ([50b1fea](https://github.com/specvital/collector/commit/50b1fea3c7834bd585c3a23615d8acb5cbae8a5f))
+
+## 🎯 Highlights
+
 ### ✨ Features
 
 - add adaptive decay logic for auto-refresh scheduling ([8a85854](https://github.com/specvital/collector/commit/8a858547c7b8a5190176253830b862588cda8042))

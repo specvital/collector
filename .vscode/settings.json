@@ -55,6 +55,14 @@
       ]
     },
     {
+      "color": "#E91E63",
+      "command": "just release",
+      "insertOnly": false,
+      "name": "$(rocket) Release",
+      "terminalName": "Release",
+      "useVsCodeApi": false
+    },
+    {
       "color": "teal",
       "name": "$(tools) Utils",
       "shortcut": "u",

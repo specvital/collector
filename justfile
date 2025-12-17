@@ -145,6 +145,9 @@ run-scheduler mode="local":
         ;;
     esac
 
+sync-docs:
+    baedal specvital/specvital.github.io/docs docs --exclude ".vitepress/**"
+
 test target="all":
     #!/usr/bin/env bash
     set -euo pipefail

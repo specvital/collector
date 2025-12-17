@@ -82,6 +82,7 @@ func StartWorker(cfg WorkerConfig) error {
 		RedisURL:        cfg.RedisURL,
 		Concurrency:     cfg.Concurrency,
 		ShutdownTimeout: cfg.ShutdownTimeout,
+		Logger:          slog.Default(),
 	})
 	if err != nil {
 		return fmt.Errorf("queue server: %w", err)

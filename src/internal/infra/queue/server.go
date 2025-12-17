@@ -2,6 +2,7 @@ package queue
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -16,6 +17,7 @@ type ServerConfig struct {
 	Concurrency     int
 	RedisURL        string
 	ShutdownTimeout time.Duration
+	Logger          *slog.Logger
 }
 
 func NewServer(cfg ServerConfig) (*asynq.Server, error) {
@@ -34,10 +36,17 @@ func NewServer(cfg ServerConfig) (*asynq.Server, error) {
 		return nil, fmt.Errorf("parse redis URI: %w", err)
 	}
 
-	return asynq.NewServer(opt, asynq.Config{
+	asynqConfig := asynq.Config{
 		Concurrency:     concurrency,
 		ShutdownTimeout: shutdownTimeout,
-	}), nil
+	}
+
+	// Use custom slog adapter to ensure logs go to stdout as JSON
+	if cfg.Logger != nil {
+		asynqConfig.Logger = NewSlogAdapter(cfg.Logger)
+	}
+
+	return asynq.NewServer(opt, asynqConfig), nil
 }
 
 func NewServeMux() *asynq.ServeMux {

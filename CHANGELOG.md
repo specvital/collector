@@ -2,6 +2,12 @@
 
 ### 🐛 Bug Fixes
 
+- resolve 60-second timeout failure during large analysis jobs ([ed18bc3](https://github.com/specvital/collector/commit/ed18bc3f587c0a446ea41b09431126ab1d22bba5))
+
+## 🎯 Highlights
+
+### 🐛 Bug Fixes
+
 - resolve 60-second timeout issue during bulk INSERT operations on NeonDB ([0b6bc9b](https://github.com/specvital/collector/commit/0b6bc9bbef0c14190ec953a14caa5b29da0422d5))
 
 ## 🔧 Maintenance

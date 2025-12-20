@@ -1,6 +1,7 @@
 {
   "name": "specvital-collector",
   "dockerComposeFile": "docker-compose.yml",
+  "initializeCommand": "touch ${HOME}/.env.secrets",
   "service": "workspace",
   "workspaceFolder": "/workspaces/specvital-collector",
   "features": {

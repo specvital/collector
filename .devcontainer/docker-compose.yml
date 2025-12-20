@@ -8,7 +8,7 @@ services:
       - ..:/workspaces/specvital-collector:delegated
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOME}/.env.secrets:/root/.env.secrets:ro
-      - claude-sessions:/root/.claude
+      - ../.claude-sessions:/root/.claude
     env_file:
       - ${HOME}/.env.secrets
     environment:
@@ -37,5 +37,4 @@ networks:
     external: true
 
 volumes:
-  claude-sessions:
   local-postgres-data:

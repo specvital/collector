@@ -35,8 +35,8 @@ type mockInvalidSource struct{}
 
 var _ analysis.Source = (*mockInvalidSource)(nil)
 
-func (m *mockInvalidSource) Branch() string              { return "" }
-func (m *mockInvalidSource) CommitSHA() string           { return "" }
+func (m *mockInvalidSource) Branch() string                { return "" }
+func (m *mockInvalidSource) CommitSHA() string             { return "" }
 func (m *mockInvalidSource) Close(_ context.Context) error { return nil }
 
 // Conversion tests moved to adapter/mapping/core_domain_test.go

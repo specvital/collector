@@ -304,6 +304,17 @@ CREATE TABLE public.test_suites (
 
 
 --
+-- Name: user_bookmarks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_bookmarks (
+    user_id uuid NOT NULL,
+    codebase_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -422,6 +433,14 @@ ALTER TABLE ONLY public.oauth_accounts
 
 
 --
+-- Name: user_bookmarks user_bookmarks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_bookmarks
+    ADD CONSTRAINT user_bookmarks_pkey PRIMARY KEY (user_id, codebase_id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -518,6 +537,13 @@ CREATE INDEX idx_test_suites_file ON public.test_suites USING btree (analysis_id
 --
 
 CREATE INDEX idx_test_suites_parent ON public.test_suites USING btree (parent_id) WHERE (parent_id IS NOT NULL);
+
+
+--
+-- Name: idx_user_bookmarks_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_bookmarks_user ON public.user_bookmarks USING btree (user_id, created_at);
 
 
 --
@@ -621,6 +647,22 @@ ALTER TABLE ONLY public.test_suites
 
 ALTER TABLE ONLY public.test_suites
     ADD CONSTRAINT fk_test_suites_parent FOREIGN KEY (parent_id) REFERENCES public.test_suites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_bookmarks fk_user_bookmarks_codebase; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_bookmarks
+    ADD CONSTRAINT fk_user_bookmarks_codebase FOREIGN KEY (codebase_id) REFERENCES public.codebases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_bookmarks fk_user_bookmarks_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_bookmarks
+    ADD CONSTRAINT fk_user_bookmarks_user FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

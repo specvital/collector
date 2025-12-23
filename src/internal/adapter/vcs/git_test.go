@@ -64,6 +64,7 @@ func TestGitSourceAdapter_Interface(t *testing.T) {
 	_ = func() string { return adapter.Branch() }
 	_ = func() string { return adapter.CommitSHA() }
 	_ = func() error { return adapter.Close(context.Background()) }
+	_ = func() (bool, error) { return adapter.VerifyCommitExists(context.Background(), "sha") }
 	// coreSourceProvider method
 	_ = func() interface{} { return adapter.CoreSource() }
 }

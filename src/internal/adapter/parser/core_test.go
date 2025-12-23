@@ -39,4 +39,8 @@ func (m *mockInvalidSource) Branch() string                { return "" }
 func (m *mockInvalidSource) CommitSHA() string             { return "" }
 func (m *mockInvalidSource) Close(_ context.Context) error { return nil }
 
+func (m *mockInvalidSource) VerifyCommitExists(_ context.Context, _ string) (bool, error) {
+	return true, nil
+}
+
 // Conversion tests moved to adapter/mapping/core_domain_test.go

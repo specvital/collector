@@ -29,9 +29,10 @@ func (m *mockVCS) GetHeadCommit(ctx context.Context, url string, token *string) 
 }
 
 type mockSource struct {
-	branchFn    func() string
-	commitSHAFn func() string
-	closeFn     func(ctx context.Context) error
+	branchFn              func() string
+	commitSHAFn           func() string
+	closeFn               func(ctx context.Context) error
+	verifyCommitExistsFn  func(ctx context.Context, sha string) (bool, error)
 }
 
 func (m *mockSource) Branch() string {
@@ -53,6 +54,13 @@ func (m *mockSource) Close(ctx context.Context) error {
 		return m.closeFn(ctx)
 	}
 	return nil
+}
+
+func (m *mockSource) VerifyCommitExists(ctx context.Context, sha string) (bool, error) {
+	if m.verifyCommitExistsFn != nil {
+		return m.verifyCommitExistsFn(ctx, sha)
+	}
+	return true, nil
 }
 
 type mockParser struct {

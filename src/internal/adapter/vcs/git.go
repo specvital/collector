@@ -99,6 +99,40 @@ func (a *gitSourceAdapter) Close(_ context.Context) error {
 	return a.gitSrc.Close()
 }
 
+// VerifyCommitExists checks if a commit SHA exists in the remote repository
+// by running "git fetch --depth 1 origin <sha>" on the cloned repository.
+//
+// Returns:
+//   - (true, nil): commit exists
+//   - (false, nil): commit does not exist (git reports "not our ref")
+//   - (false, error): verification failed (network error, context cancelled, etc.)
+//
+// Note: "not our ref" detection may vary across git versions/locales.
+func (a *gitSourceAdapter) VerifyCommitExists(ctx context.Context, sha string) (bool, error) {
+	if sha == "" {
+		return false, fmt.Errorf("verify commit exists: SHA is required")
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "fetch", "--depth", "1", "origin", sha)
+	cmd.Dir = a.gitSrc.Root()
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return false, fmt.Errorf("verify commit exists %s: %w", sha, ctx.Err())
+		}
+		stderrStr := stderr.String()
+		if strings.Contains(stderrStr, "not our ref") {
+			return false, nil
+		}
+		return false, fmt.Errorf("git fetch origin %s: %s: %w", sha, stderrStr, err)
+	}
+
+	return true, nil
+}
+
 // CoreSource returns the underlying source.Source for use by the parser adapter.
 // This allows the parser to access the core source interface without exposing
 // implementation details in the domain layer.

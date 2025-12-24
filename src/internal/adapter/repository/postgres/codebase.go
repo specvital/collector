@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -66,6 +67,51 @@ func (r *CodebaseRepository) MarkStale(ctx context.Context, id analysis.UUID) er
 	}
 
 	return nil
+}
+
+func (r *CodebaseRepository) MarkStaleAndUpsert(ctx context.Context, staleID analysis.UUID, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			slog.ErrorContext(ctx, "failed to rollback transaction",
+				"operation", "MarkStaleAndUpsert",
+				"error", rbErr,
+				"stale_id", staleID,
+				"owner", params.Owner,
+				"name", params.Name,
+			)
+		}
+	}()
+
+	queries := db.New(tx)
+
+	if err := queries.MarkCodebaseStale(ctx, toPgUUID(staleID)); err != nil {
+		return nil, fmt.Errorf("mark codebase stale: %w", err)
+	}
+
+	row, err := queries.UpsertCodebase(ctx, db.UpsertCodebaseParams{
+		Host:           params.Host,
+		Owner:          params.Owner,
+		Name:           params.Name,
+		DefaultBranch:  pgtype.Text{String: params.DefaultBranch, Valid: params.DefaultBranch != ""},
+		ExternalRepoID: params.ExternalRepoID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upsert codebase: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return mapCodebase(row), nil
 }
 
 func (r *CodebaseRepository) UnmarkStale(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error) {

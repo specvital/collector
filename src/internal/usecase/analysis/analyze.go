@@ -303,36 +303,35 @@ func (uc *AnalyzeUseCase) resolveCodebaseWithAPI(
 		return codebaseByID, nil
 	}
 
-	if codebaseByName != nil && codebaseByName.ExternalRepoID != externalRepoID {
-		if markErr := uc.codebaseRepo.MarkStale(ctx, codebaseByName.ID); markErr != nil {
-			return nil, fmt.Errorf("mark stale for %s/%s: %w", req.Owner, req.Repo, markErr)
-		}
-		slog.InfoContext(ctx, "old codebase marked stale",
-			"case", "delete_recreate",
-			"owner", req.Owner,
-			"repo", req.Repo,
-			"old_codebase_id", codebaseByName.ID,
-			"old_external_repo_id", codebaseByName.ExternalRepoID,
-			"new_external_repo_id", externalRepoID,
-		)
-	}
-
-	newCodebase, err := uc.codebaseRepo.Upsert(ctx, analysis.UpsertCodebaseParams{
+	upsertParams := analysis.UpsertCodebaseParams{
 		Host:           host,
 		Owner:          req.Owner,
 		Name:           req.Repo,
 		ExternalRepoID: externalRepoID,
-	})
+	}
+
+	if codebaseByName != nil && codebaseByName.ExternalRepoID != externalRepoID {
+		newCodebase, err := uc.codebaseRepo.MarkStaleAndUpsert(ctx, codebaseByName.ID, upsertParams)
+		if err != nil {
+			return nil, fmt.Errorf("mark stale and upsert for %s/%s: %w", req.Owner, req.Repo, err)
+		}
+		slog.InfoContext(ctx, "codebase resolved",
+			"case", "delete_recreate",
+			"owner", req.Owner,
+			"repo", req.Repo,
+			"codebase_id", newCodebase.ID,
+			"old_codebase_id", codebaseByName.ID,
+		)
+		return newCodebase, nil
+	}
+
+	newCodebase, err := uc.codebaseRepo.Upsert(ctx, upsertParams)
 	if err != nil {
 		return nil, fmt.Errorf("upsert codebase for %s/%s: %w", req.Owner, req.Repo, err)
 	}
 
-	caseType := "new"
-	if codebaseByName != nil {
-		caseType = "delete_recreate"
-	}
 	slog.InfoContext(ctx, "codebase resolved",
-		"case", caseType,
+		"case", "new",
 		"owner", req.Owner,
 		"repo", req.Repo,
 		"codebase_id", newCodebase.ID,

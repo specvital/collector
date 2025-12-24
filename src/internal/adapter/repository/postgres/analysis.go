@@ -238,32 +238,75 @@ func (r *AnalysisRepository) SaveAnalysisInventory(ctx context.Context, params a
 	return nil
 }
 
-// SaveAnalysisResult is a convenience method that combines CreateAnalysisRecord and SaveAnalysisInventory.
-// This method is kept for backward compatibility with existing code that uses parser.ScanResult.
-// It is not part of the domain interface.
+// SaveAnalysisResult is a convenience method that combines CreateAnalysisRecord and SaveAnalysisInventory
+// in a single transaction. This method is kept for backward compatibility with existing code that uses
+// parser.ScanResult. It is not part of the domain interface.
 func (r *AnalysisRepository) SaveAnalysisResult(ctx context.Context, params SaveAnalysisResultParams) error {
 	if err := params.Validate(); err != nil {
 		return err
 	}
 
-	analysisID, err := r.CreateAnalysisRecord(ctx, analysis.CreateAnalysisRecordParams{
-		Branch:         params.Branch,
-		CommitSHA:      params.CommitSHA,
-		ExternalRepoID: params.ExternalRepoID,
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			slog.ErrorContext(ctx, "failed to rollback transaction",
+				"operation", "SaveAnalysisResult",
+				"error", rbErr,
+				"owner", params.Owner,
+				"repo", params.Repo,
+			)
+		}
+	}()
+
+	queries := db.New(tx)
+	startedAt := time.Now()
+
+	codebase, err := queries.UpsertCodebase(ctx, db.UpsertCodebaseParams{
+		Host:           defaultHost,
 		Owner:          params.Owner,
-		Repo:           params.Repo,
+		Name:           params.Repo,
+		DefaultBranch:  pgtype.Text{String: params.Branch, Valid: params.Branch != ""},
+		ExternalRepoID: params.ExternalRepoID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("upsert codebase: %w", err)
+	}
+
+	analysisID := analysis.NewUUID()
+	dbAnalysis, err := queries.CreateAnalysis(ctx, db.CreateAnalysisParams{
+		ID:         toPgUUID(analysisID),
+		CodebaseID: codebase.ID,
+		CommitSha:  params.CommitSHA,
+		BranchName: pgtype.Text{String: params.Branch, Valid: params.Branch != ""},
+		Status:     db.AnalysisStatusRunning,
+		StartedAt:  pgtype.Timestamptz{Time: startedAt, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("create analysis: %w", err)
 	}
 
 	domainInventory := convertCoreToDomainInventory(params.Result.Inventory)
+	pgID := dbAnalysis.ID
 
-	if err := r.SaveAnalysisInventory(ctx, analysis.SaveAnalysisInventoryParams{
-		AnalysisID: analysisID,
-		Inventory:  domainInventory,
+	totalSuites, totalTests, err := r.saveInventory(ctx, tx, pgID, domainInventory)
+	if err != nil {
+		return fmt.Errorf("save inventory: %w", err)
+	}
+
+	if err := queries.UpdateAnalysisCompleted(ctx, db.UpdateAnalysisCompletedParams{
+		ID:          pgID,
+		TotalSuites: int32(totalSuites),
+		TotalTests:  int32(totalTests),
+		CompletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	}); err != nil {
-		return err
+		return fmt.Errorf("update analysis: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

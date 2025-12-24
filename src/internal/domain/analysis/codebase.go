@@ -47,6 +47,7 @@ type CodebaseRepository interface {
 	FindByOwnerName(ctx context.Context, host, owner, name string) (*Codebase, error)
 	FindWithLastCommit(ctx context.Context, host, owner, name string) (*Codebase, error)
 	MarkStale(ctx context.Context, id UUID) error
+	MarkStaleAndUpsert(ctx context.Context, staleID UUID, params UpsertCodebaseParams) (*Codebase, error)
 	UnmarkStale(ctx context.Context, id UUID, owner, name string) (*Codebase, error)
 	UpdateOwnerName(ctx context.Context, id UUID, owner, name string) (*Codebase, error)
 	Upsert(ctx context.Context, params UpsertCodebaseParams) (*Codebase, error)

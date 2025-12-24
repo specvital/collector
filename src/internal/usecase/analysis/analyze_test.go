@@ -100,13 +100,14 @@ func (m *mockRepository) SaveAnalysisInventory(ctx context.Context, params analy
 }
 
 type mockCodebaseRepository struct {
-	findByExternalIDFn   func(ctx context.Context, host, externalRepoID string) (*analysis.Codebase, error)
-	findByOwnerNameFn    func(ctx context.Context, host, owner, name string) (*analysis.Codebase, error)
-	findWithLastCommitFn func(ctx context.Context, host, owner, name string) (*analysis.Codebase, error)
-	markStaleFn          func(ctx context.Context, id analysis.UUID) error
-	unmarkStaleFn        func(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error)
-	updateOwnerNameFn    func(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error)
-	upsertFn             func(ctx context.Context, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error)
+	findByExternalIDFn    func(ctx context.Context, host, externalRepoID string) (*analysis.Codebase, error)
+	findByOwnerNameFn     func(ctx context.Context, host, owner, name string) (*analysis.Codebase, error)
+	findWithLastCommitFn  func(ctx context.Context, host, owner, name string) (*analysis.Codebase, error)
+	markStaleFn           func(ctx context.Context, id analysis.UUID) error
+	markStaleAndUpsertFn  func(ctx context.Context, staleID analysis.UUID, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error)
+	unmarkStaleFn         func(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error)
+	updateOwnerNameFn     func(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error)
+	upsertFn              func(ctx context.Context, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error)
 }
 
 func (m *mockCodebaseRepository) FindByExternalID(ctx context.Context, host, externalRepoID string) (*analysis.Codebase, error) {
@@ -135,6 +136,19 @@ func (m *mockCodebaseRepository) MarkStale(ctx context.Context, id analysis.UUID
 		return m.markStaleFn(ctx, id)
 	}
 	return nil
+}
+
+func (m *mockCodebaseRepository) MarkStaleAndUpsert(ctx context.Context, staleID analysis.UUID, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
+	if m.markStaleAndUpsertFn != nil {
+		return m.markStaleAndUpsertFn(ctx, staleID, params)
+	}
+	return &analysis.Codebase{
+		ID:             analysis.NewUUID(),
+		Host:           params.Host,
+		Owner:          params.Owner,
+		Name:           params.Name,
+		ExternalRepoID: params.ExternalRepoID,
+	}, nil
 }
 
 func (m *mockCodebaseRepository) UnmarkStale(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error) {
@@ -1106,8 +1120,7 @@ func TestResolveCodebase(t *testing.T) {
 		parser := newSuccessfulParser()
 
 		oldCodebaseID := analysis.NewUUID()
-		markStaleCalled := false
-		upsertCalled := false
+		markStaleAndUpsertCalled := false
 
 		codebaseRepo := &mockCodebaseRepository{
 			findWithLastCommitFn: func(ctx context.Context, host, owner, name string) (*analysis.Codebase, error) {
@@ -1123,15 +1136,11 @@ func TestResolveCodebase(t *testing.T) {
 			findByExternalIDFn: func(ctx context.Context, host, externalRepoID string) (*analysis.Codebase, error) {
 				return nil, analysis.ErrCodebaseNotFound
 			},
-			markStaleFn: func(ctx context.Context, id analysis.UUID) error {
-				markStaleCalled = true
-				if id != oldCodebaseID {
-					t.Errorf("expected to mark stale ID %v, got %v", oldCodebaseID, id)
+			markStaleAndUpsertFn: func(ctx context.Context, staleID analysis.UUID, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
+				markStaleAndUpsertCalled = true
+				if staleID != oldCodebaseID {
+					t.Errorf("expected to mark stale ID %v, got %v", oldCodebaseID, staleID)
 				}
-				return nil
-			},
-			upsertFn: func(ctx context.Context, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
-				upsertCalled = true
 				return &analysis.Codebase{
 					ID:             analysis.NewUUID(),
 					Host:           params.Host,
@@ -1154,11 +1163,8 @@ func TestResolveCodebase(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		if !markStaleCalled {
-			t.Error("MarkStale should be called for delete/recreate case")
-		}
-		if !upsertCalled {
-			t.Error("Upsert should be called to create new codebase")
+		if !markStaleAndUpsertCalled {
+			t.Error("MarkStaleAndUpsert should be called for delete/recreate case")
 		}
 	})
 

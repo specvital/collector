@@ -176,6 +176,94 @@ func TestCodebaseRepository_MarkStale(t *testing.T) {
 	})
 }
 
+func TestCodebaseRepository_MarkStaleAndUpsert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	analysisRepo := NewAnalysisRepository(pool)
+	codebaseRepo := NewCodebaseRepository(pool)
+	ctx := context.Background()
+
+	t.Run("should mark old codebase stale and create new one atomically", func(t *testing.T) {
+		_, err := analysisRepo.CreateAnalysisRecord(ctx, analysis.CreateAnalysisRecordParams{
+			Owner:          "atomic-old-owner",
+			Repo:           "atomic-old-repo",
+			CommitSHA:      "atomic-sha",
+			Branch:         "main",
+			ExternalRepoID: "old-ext-id-atomic",
+		})
+		if err != nil {
+			t.Fatalf("CreateAnalysisRecord failed: %v", err)
+		}
+
+		oldCodebase, err := codebaseRepo.FindByOwnerName(ctx, "github.com", "atomic-old-owner", "atomic-old-repo")
+		if err != nil {
+			t.Fatalf("FindByOwnerName failed: %v", err)
+		}
+
+		newCodebase, err := codebaseRepo.MarkStaleAndUpsert(ctx, oldCodebase.ID, analysis.UpsertCodebaseParams{
+			Host:           "github.com",
+			Owner:          "atomic-new-owner",
+			Name:           "atomic-new-repo",
+			ExternalRepoID: "new-ext-id-atomic",
+		})
+		if err != nil {
+			t.Fatalf("MarkStaleAndUpsert failed: %v", err)
+		}
+
+		if newCodebase.Owner != "atomic-new-owner" {
+			t.Errorf("expected owner 'atomic-new-owner', got '%s'", newCodebase.Owner)
+		}
+		if newCodebase.Name != "atomic-new-repo" {
+			t.Errorf("expected name 'atomic-new-repo', got '%s'", newCodebase.Name)
+		}
+		if newCodebase.ExternalRepoID != "new-ext-id-atomic" {
+			t.Errorf("expected external repo ID 'new-ext-id-atomic', got '%s'", newCodebase.ExternalRepoID)
+		}
+		if newCodebase.ID == oldCodebase.ID {
+			t.Error("expected new codebase to have different ID from old one")
+		}
+
+		staleCodebase, err := codebaseRepo.FindByExternalID(ctx, "github.com", "old-ext-id-atomic")
+		if err != nil {
+			t.Fatalf("FindByExternalID for old codebase failed: %v", err)
+		}
+		if !staleCodebase.IsStale {
+			t.Error("expected old codebase to be marked stale")
+		}
+
+		_, err = codebaseRepo.FindByOwnerName(ctx, "github.com", "atomic-old-owner", "atomic-old-repo")
+		if !errors.Is(err, analysis.ErrCodebaseNotFound) {
+			t.Errorf("expected old codebase not found by owner/name after stale, got %v", err)
+		}
+
+		foundNew, err := codebaseRepo.FindByOwnerName(ctx, "github.com", "atomic-new-owner", "atomic-new-repo")
+		if err != nil {
+			t.Fatalf("FindByOwnerName for new codebase failed: %v", err)
+		}
+		if foundNew.ID != newCodebase.ID {
+			t.Error("expected to find new codebase by owner/name")
+		}
+	})
+
+	t.Run("should validate params", func(t *testing.T) {
+		dummyID := analysis.NewUUID()
+		_, err := codebaseRepo.MarkStaleAndUpsert(ctx, dummyID, analysis.UpsertCodebaseParams{
+			Host:           "",
+			Owner:          "owner",
+			Name:           "name",
+			ExternalRepoID: "ext-id",
+		})
+		if !errors.Is(err, analysis.ErrInvalidInput) {
+			t.Errorf("expected ErrInvalidInput for empty host, got %v", err)
+		}
+	})
+}
+
 func TestCodebaseRepository_UnmarkStale(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")

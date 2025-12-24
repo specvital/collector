@@ -119,6 +119,16 @@ func (m *mockCodebaseRepository) MarkStale(ctx context.Context, id analysis.UUID
 	return nil
 }
 
+func (m *mockCodebaseRepository) MarkStaleAndUpsert(ctx context.Context, staleID analysis.UUID, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
+	return &analysis.Codebase{
+		ID:             analysis.NewUUID(),
+		Host:           params.Host,
+		Owner:          params.Owner,
+		Name:           params.Name,
+		ExternalRepoID: params.ExternalRepoID,
+	}, nil
+}
+
 func (m *mockCodebaseRepository) UnmarkStale(ctx context.Context, id analysis.UUID, owner, name string) (*analysis.Codebase, error) {
 	return &analysis.Codebase{ID: id, Owner: owner, Name: name}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/specvital/collector/internal/domain/analysis"
 )
@@ -37,6 +38,7 @@ var _ analysis.Source = (*mockInvalidSource)(nil)
 
 func (m *mockInvalidSource) Branch() string                { return "" }
 func (m *mockInvalidSource) CommitSHA() string             { return "" }
+func (m *mockInvalidSource) CommittedAt() time.Time        { return time.Time{} }
 func (m *mockInvalidSource) Close(_ context.Context) error { return nil }
 
 func (m *mockInvalidSource) VerifyCommitExists(_ context.Context, _ string) (bool, error) {

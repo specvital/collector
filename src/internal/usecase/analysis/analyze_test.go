@@ -47,6 +47,10 @@ func (m *mockSource) CommitSHA() string {
 	return "abc123"
 }
 
+func (m *mockSource) CommittedAt() time.Time {
+	return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+}
+
 func (m *mockSource) Close(ctx context.Context) error {
 	if m.closeFn != nil {
 		return m.closeFn(ctx)

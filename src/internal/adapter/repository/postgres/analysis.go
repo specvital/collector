@@ -206,6 +206,7 @@ func (r *AnalysisRepository) SaveAnalysisInventory(ctx context.Context, params a
 		TotalSuites: int32(totalSuites),
 		TotalTests:  int32(totalTests),
 		CompletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CommittedAt: pgtype.Timestamptz{Time: params.CommittedAt, Valid: !params.CommittedAt.IsZero()},
 	}); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -301,6 +302,7 @@ func (r *AnalysisRepository) SaveAnalysisResult(ctx context.Context, params Save
 		TotalSuites: int32(totalSuites),
 		TotalTests:  int32(totalTests),
 		CompletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CommittedAt: pgtype.Timestamptz{},
 	}); err != nil {
 		return fmt.Errorf("update analysis: %w", err)
 	}

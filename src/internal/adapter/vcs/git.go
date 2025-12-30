@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/specvital/collector/internal/domain/analysis"
 	"github.com/specvital/core/pkg/source"
@@ -93,6 +94,10 @@ func (a *gitSourceAdapter) Branch() string {
 
 func (a *gitSourceAdapter) CommitSHA() string {
 	return a.gitSrc.CommitSHA()
+}
+
+func (a *gitSourceAdapter) CommittedAt() time.Time {
+	return a.gitSrc.CommittedAt()
 }
 
 func (a *gitSourceAdapter) Close(_ context.Context) error {

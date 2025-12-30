@@ -3,6 +3,7 @@ package analysis
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type Repository interface {
@@ -42,9 +43,10 @@ func (p CreateAnalysisRecordParams) Validate() error {
 }
 
 type SaveAnalysisInventoryParams struct {
-	AnalysisID UUID
-	Inventory  *Inventory
-	UserID     *string
+	AnalysisID  UUID
+	CommittedAt time.Time
+	Inventory   *Inventory
+	UserID      *string
 }
 
 func (p SaveAnalysisInventoryParams) Validate() error {

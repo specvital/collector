@@ -28,7 +28,7 @@ RETURNING *;
 
 -- name: UpdateAnalysisCompleted :exec
 UPDATE analyses
-SET status = 'completed', total_suites = $2, total_tests = $3, completed_at = $4
+SET status = 'completed', total_suites = $2, total_tests = $3, completed_at = $4, committed_at = $5
 WHERE id = $1;
 
 -- name: UpdateAnalysisFailed :exec

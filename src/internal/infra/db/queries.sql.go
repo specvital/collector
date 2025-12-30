@@ -14,7 +14,7 @@ import (
 const createAnalysis = `-- name: CreateAnalysis :one
 INSERT INTO analyses (id, codebase_id, commit_sha, branch_name, status, started_at)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, codebase_id, commit_sha, branch_name, status, error_message, started_at, completed_at, created_at, total_suites, total_tests
+RETURNING id, codebase_id, commit_sha, branch_name, status, error_message, started_at, completed_at, created_at, total_suites, total_tests, committed_at
 `
 
 type CreateAnalysisParams struct {
@@ -48,6 +48,7 @@ func (q *Queries) CreateAnalysis(ctx context.Context, arg CreateAnalysisParams) 
 		&i.CreatedAt,
 		&i.TotalSuites,
 		&i.TotalTests,
+		&i.CommittedAt,
 	)
 	return i, err
 }
@@ -484,7 +485,7 @@ func (q *Queries) UnmarkCodebaseStale(ctx context.Context, arg UnmarkCodebaseSta
 
 const updateAnalysisCompleted = `-- name: UpdateAnalysisCompleted :exec
 UPDATE analyses
-SET status = 'completed', total_suites = $2, total_tests = $3, completed_at = $4
+SET status = 'completed', total_suites = $2, total_tests = $3, completed_at = $4, committed_at = $5
 WHERE id = $1
 `
 
@@ -493,6 +494,7 @@ type UpdateAnalysisCompletedParams struct {
 	TotalSuites int32              `json:"total_suites"`
 	TotalTests  int32              `json:"total_tests"`
 	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	CommittedAt pgtype.Timestamptz `json:"committed_at"`
 }
 
 func (q *Queries) UpdateAnalysisCompleted(ctx context.Context, arg UpdateAnalysisCompletedParams) error {
@@ -501,6 +503,7 @@ func (q *Queries) UpdateAnalysisCompleted(ctx context.Context, arg UpdateAnalysi
 		arg.TotalSuites,
 		arg.TotalTests,
 		arg.CompletedAt,
+		arg.CommittedAt,
 	)
 	return err
 }

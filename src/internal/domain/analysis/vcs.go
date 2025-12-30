@@ -1,6 +1,9 @@
 package analysis
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type VCS interface {
 	Clone(ctx context.Context, url string, token *string) (Source, error)
@@ -11,6 +14,7 @@ type VCS interface {
 type Source interface {
 	Branch() string
 	CommitSHA() string
+	CommittedAt() time.Time
 	Close(ctx context.Context) error
 	// VerifyCommitExists checks if a commit SHA exists in the remote repository
 	// by running "git fetch --depth 1 origin <sha>" on the cloned repository.

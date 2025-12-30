@@ -121,6 +121,7 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			created_at timestamptz DEFAULT now() NOT NULL,
 			total_suites integer DEFAULT 0 NOT NULL,
 			total_tests integer DEFAULT 0 NOT NULL,
+			committed_at timestamptz,
 			UNIQUE (codebase_id, commit_sha)
 		);
 

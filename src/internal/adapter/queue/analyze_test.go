@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
@@ -47,6 +48,10 @@ func (m *mockSource) CommitSHA() string {
 		return m.commitSHAFn()
 	}
 	return "abc123"
+}
+
+func (m *mockSource) CommittedAt() time.Time {
+	return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
 func (m *mockSource) Close(ctx context.Context) error {

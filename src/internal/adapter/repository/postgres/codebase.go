@@ -151,6 +151,20 @@ func (r *CodebaseRepository) UpdateOwnerName(ctx context.Context, id analysis.UU
 	return mapCodebase(row), nil
 }
 
+func (r *CodebaseRepository) UpdateVisibility(ctx context.Context, id analysis.UUID, isPrivate bool) error {
+	queries := db.New(r.pool)
+
+	err := queries.UpdateCodebaseVisibility(ctx, db.UpdateCodebaseVisibilityParams{
+		ID:        toPgUUID(id),
+		IsPrivate: isPrivate,
+	})
+	if err != nil {
+		return fmt.Errorf("update codebase visibility: %w", err)
+	}
+
+	return nil
+}
+
 func (r *CodebaseRepository) FindWithLastCommit(ctx context.Context, host, owner, name string) (*analysis.Codebase, error) {
 	queries := db.New(r.pool)
 

@@ -222,6 +222,13 @@ func (uc *AnalyzeUseCase) resolveCodebase(
 					"last_commit_sha", codebase.LastCommitSHA,
 				)
 			} else if verified {
+				if err := uc.codebaseRepo.UpdateVisibility(ctx, codebase.ID, isPrivate); err != nil {
+					slog.WarnContext(ctx, "failed to update visibility",
+						"error", err,
+						"codebase_id", codebase.ID,
+						"is_private", isPrivate,
+					)
+				}
 				slog.InfoContext(ctx, "codebase resolved",
 					"case", "reanalysis",
 					"owner", req.Owner,

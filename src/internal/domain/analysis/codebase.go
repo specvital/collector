@@ -51,5 +51,6 @@ type CodebaseRepository interface {
 	MarkStaleAndUpsert(ctx context.Context, staleID UUID, params UpsertCodebaseParams) (*Codebase, error)
 	UnmarkStale(ctx context.Context, id UUID, owner, name string) (*Codebase, error)
 	UpdateOwnerName(ctx context.Context, id UUID, owner, name string) (*Codebase, error)
+	UpdateVisibility(ctx context.Context, id UUID, isPrivate bool) error
 	Upsert(ctx context.Context, params UpsertCodebaseParams) (*Codebase, error)
 }

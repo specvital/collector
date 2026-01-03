@@ -146,6 +146,10 @@ func (m *mockCodebaseRepository) UpdateOwnerName(ctx context.Context, id analysi
 	return &analysis.Codebase{ID: id, Owner: owner, Name: name}, nil
 }
 
+func (m *mockCodebaseRepository) UpdateVisibility(ctx context.Context, id analysis.UUID, isPrivate bool) error {
+	return nil
+}
+
 func (m *mockCodebaseRepository) Upsert(ctx context.Context, params analysis.UpsertCodebaseParams) (*analysis.Codebase, error) {
 	return &analysis.Codebase{
 		ID:             analysis.NewUUID(),

@@ -564,6 +564,22 @@ func (q *Queries) UpdateCodebaseOwnerName(ctx context.Context, arg UpdateCodebas
 	return i, err
 }
 
+const updateCodebaseVisibility = `-- name: UpdateCodebaseVisibility :exec
+UPDATE codebases
+SET is_private = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateCodebaseVisibilityParams struct {
+	ID        pgtype.UUID `json:"id"`
+	IsPrivate bool        `json:"is_private"`
+}
+
+func (q *Queries) UpdateCodebaseVisibility(ctx context.Context, arg UpdateCodebaseVisibilityParams) error {
+	_, err := q.db.Exec(ctx, updateCodebaseVisibility, arg.ID, arg.IsPrivate)
+	return err
+}
+
 const upsertCodebase = `-- name: UpsertCodebase :one
 INSERT INTO codebases (host, owner, name, default_branch, external_repo_id, is_private)
 VALUES ($1, $2, $3, $4, $5, $6)

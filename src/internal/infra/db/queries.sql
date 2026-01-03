@@ -71,6 +71,11 @@ SET owner = $2, name = $3, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- name: UpdateCodebaseVisibility :exec
+UPDATE codebases
+SET is_private = $2, updated_at = now()
+WHERE id = $1;
+
 -- name: FindCodebaseWithLastCommitByOwnerName :one
 SELECT
     c.*,

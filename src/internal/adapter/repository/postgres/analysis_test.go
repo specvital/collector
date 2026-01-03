@@ -103,7 +103,8 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			updated_at timestamptz DEFAULT now() NOT NULL,
 			last_viewed_at timestamptz,
 			external_repo_id varchar(64) NOT NULL,
-			is_stale boolean DEFAULT false NOT NULL
+			is_stale boolean DEFAULT false NOT NULL,
+			is_private boolean DEFAULT false NOT NULL
 		);
 
 		CREATE UNIQUE INDEX idx_codebases_external_repo_id ON codebases (host, external_repo_id);

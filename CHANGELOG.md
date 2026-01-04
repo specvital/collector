@@ -1,5 +1,74 @@
 # Changelog
 
+## [1.1.0](https://github.com/specvital/collector/compare/v1.0.6...v1.1.0) (2026-01-04)
+
+### 🎯 Highlights
+
+#### ✨ Features
+
+- add Clone-Rename race condition detection ([ebbf443](https://github.com/specvital/collector/commit/ebbf443e3b9271c4dba82d38a567d3efdc0236a9))
+- add codebase lookup queries based on external_repo_id ([d6e0b79](https://github.com/specvital/collector/commit/d6e0b797ec46aab29eb897c6c1d6a8cdbb6b47c6))
+- add codebase stale handling queries and repository methods ([939e078](https://github.com/specvital/collector/commit/939e07886a8a26c385ad3206c71fe8205a6bd001))
+- add GitHub API client for repository ID lookup ([46e40b8](https://github.com/specvital/collector/commit/46e40b806843f7e87ec98269baca7bce136064bd))
+- determine repository visibility via reversed git ls-remote order ([0bc988e](https://github.com/specvital/collector/commit/0bc988e839f795678281ac6431b41199e4f95f95))
+- integrate codebase resolution case branching into AnalyzeUseCase ([0f58440](https://github.com/specvital/collector/commit/0f58440f0012c15fd215f57a58917370ff93b2a9))
+- record user analysis history on analysis completion ([e2b2095](https://github.com/specvital/collector/commit/e2b2095c47dffbd51fa57d3d24c550c19cfed851))
+- store commit timestamp on analysis completion ([24bdbd7](https://github.com/specvital/collector/commit/24bdbd7050a40fbcf41965e6abfb728dc9460870))
+
+#### 🐛 Bug Fixes
+
+- add missing focused and xfail TestStatus types ([b24ee33](https://github.com/specvital/collector/commit/b24ee333e5c5e0f71098326f934c09853976fee6))
+- add missing is_private column to test schema ([5744b95](https://github.com/specvital/collector/commit/5744b956a7b408f3dbc7583456eaedbf7fa1f4f6))
+- ensure transaction atomicity for multi-step DB operations ([16834ef](https://github.com/specvital/collector/commit/16834ef0837917df4c30d31135e4f97a8a07eb3b))
+- exclude stale codebases from Scheduler auto-refresh ([933c417](https://github.com/specvital/collector/commit/933c41711f375979d96cf5401ba93e6171891b49))
+- fix visibility not being updated on reanalysis ([2424a5f](https://github.com/specvital/collector/commit/2424a5fadaebfd0fed1aba07045f2c86ddd5c585))
+- prevent duplicate analysis job enqueue for same commit ([1a996ea](https://github.com/specvital/collector/commit/1a996ea38ad6742647317932e7acbb24939146e1))
+- prevent unnecessary job retries on duplicate key error ([40eda32](https://github.com/specvital/collector/commit/40eda32b890206f3f3ef5913ce8ed4f9afdc0cdb))
+- resolve stray containers from failed testcontainers cleanup ([1ef5124](https://github.com/specvital/collector/commit/1ef5124a617fcbc1ddd434b6a74baa6dd5ab390a))
+
+#### ⚡ Performance
+
+- improve DB save performance for large repository analysis ([200a527](https://github.com/specvital/collector/commit/200a5275cf639a2c0c65d955e79dbe65ad4f7068))
+
+### 🔧 Maintenance
+
+#### 🔧 Internal Fixes
+
+- **devcontainer:** fix network creation failure in Codespaces ([2054227](https://github.com/specvital/collector/commit/2054227927b13127fb2c770323dcc17e6bba4d0a))
+- isolate git ls-remote environment to fix private repo misclassification ([7d15fb8](https://github.com/specvital/collector/commit/7d15fb82534cb2c4c34ea368173265c185abf543))
+
+#### 📚 Documentation
+
+- add CLAUDE.md ([5194d71](https://github.com/specvital/collector/commit/5194d713b2f07fd2d4d2a66df62f861520b027bc))
+- add missing version headers and improve CHANGELOG hierarchy ([d6436ab](https://github.com/specvital/collector/commit/d6436ab60b12e4bf551c23d59009fa66782e6eb4))
+- rename infra repo in docs ([1bdb806](https://github.com/specvital/collector/commit/1bdb806dabc7fd082cb114e93f349aaa619d5315))
+
+#### 💄 Styles
+
+- format code ([8616fbd](https://github.com/specvital/collector/commit/8616fbdae4105860c87569093f302ba6a877c6c7))
+
+#### ♻️ Refactoring
+
+- remove unused deprecated Stop method ([c034ecc](https://github.com/specvital/collector/commit/c034ecc56660bda965a297072e7d23400e8b8e61))
+- **test:** auto-sync test schema with production schema ([77668e0](https://github.com/specvital/collector/commit/77668e0e946003dc4f0d3b9e9c086c85b70f8fab))
+
+#### 🔨 Chore
+
+- changing the environment variable name for accessing GitHub MCP ([553c63d](https://github.com/specvital/collector/commit/553c63d358a5b1fd1c607843d41b90544d86330e))
+- dump schema ([ba3fc16](https://github.com/specvital/collector/commit/ba3fc165a074f0827417ee6212002e79c9d5340e))
+- dump schema ([425b609](https://github.com/specvital/collector/commit/425b6098dc1ee104189a4a33dc635f5e0b9f0352))
+- dump schema ([52575e5](https://github.com/specvital/collector/commit/52575e5701088de44401abb227080800250094d8))
+- dump schema ([abdaa2e](https://github.com/specvital/collector/commit/abdaa2eda93763d793b2a8a67f6fe2f3b4e14166))
+- fix vscode import area not automatically collapsing ([ac92e87](https://github.com/specvital/collector/commit/ac92e87ee1be68a886e4df8b5ed006d0fc8ba0dd))
+- improved the claude code status line to display the correct context window size. ([e1fa775](https://github.com/specvital/collector/commit/e1fa775b9dfd49ed57ec5d66aaf0eab4ec0e34b8))
+- modified container structure to support codespaces ([0d1fec6](https://github.com/specvital/collector/commit/0d1fec6ec9af2bd3fb1df5a292242e240e13a36e))
+- modify local db migration to always initialize the database ([7709a5b](https://github.com/specvital/collector/commit/7709a5b8af0a8fd7bee795ebd533dd5d3944d243))
+- sync ai-config-toolkit ([0d00d4a](https://github.com/specvital/collector/commit/0d00d4a615fa3b1c162e8976b0f86b87948f0eaf))
+- sync docs ([86772da](https://github.com/specvital/collector/commit/86772da7cb514400b7f7c89ea0defde95241195e))
+- update core ([9092761](https://github.com/specvital/collector/commit/9092761f54e28b114b70a7dfbab14e8b82e27bdc))
+- update core ([e6613c3](https://github.com/specvital/collector/commit/e6613c3a8e85189621056981ae0e3d91ff266e41))
+- update core ([c163ae9](https://github.com/specvital/collector/commit/c163ae92f08d30046712de8c4b86b3162eaae758))
+
 ## [1.0.6](https://github.com/specvital/collector/compare/v1.0.5...v1.0.6) (2025-12-19)
 
 ### 🎯 Highlights
